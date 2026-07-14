@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo Dialog と Redux のデータフロー</title>
+    <style>
+      :root {
+        color: #17231d;
+        background: #f4f7f5;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main { width: min(100% - 32px, 920px); margin: 0 auto; padding: 48px 0 72px; }
+      h1, h2 { color: #17231d; letter-spacing: 0; }
+      h1 { margin: 0 0 12px; font-size: 36px; line-height: 1.2; }
+      h2 { margin: 0 0 14px; font-size: 21px; }
+      p { margin: 0 0 14px; }
+      .lead { max-width: 680px; color: #52675a; font-size: 17px; }
+      section { margin-top: 34px; padding-top: 24px; border-top: 1px solid #c5d0c8; }
+      .flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 18px 0; }
+      .step { min-height: 116px; padding: 14px; border: 1px solid #aebfb4; border-radius: 6px; background: #fff; }
+      .step strong { display: block; margin-bottom: 6px; color: #2f694c; font-size: 14px; }
+      .step span { display: block; color: #52675a; font-size: 14px; }
+      pre { overflow-x: auto; margin: 14px 0; padding: 16px; border-radius: 6px; background: #16231c; color: #e9f2eb; font: 13px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; }
+      code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .note { padding: 14px; border-left: 4px solid #397354; background: #e6efe9; color: #294836; }
+      ul { margin: 0; padding-left: 22px; }
+      li + li { margin-top: 7px; }
+      @media (max-width: 720px) {
+        main { width: min(100% - 24px, 920px); padding-top: 28px; }
+        h1 { font-size: 30px; }
+        .flow { grid-template-columns: 1fr 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Todo Dialog と Redux のデータフロー</h1>
+        <p class="lead">
+          ダイアログと一覧は同じ Redux Store を参照します。入力欄からフォーカスを外すと、API 保存を待たずに Store を更新するため、背面の一覧も即座に再描画されます。
+        </p>
+      </header>
+
+      <section>
+        <h2>フォーカス離脱時の流れ</h2>
+        <div class="flow">
+          <div class="step"><strong>1. 入力</strong><span>ダイアログで Todo 名または詳細を編集します。</span></div>
+          <div class="step"><strong>2. blur</strong><span><code>onBlur</code> がドラフトの確定処理を呼びます。</span></div>
+          <div class="step"><strong>3. Redux</strong><span><code>todoChanged</code> が対象の Todo を置換します。</span></div>
+          <div class="step"><strong>4. 再描画</strong><span>一覧とダイアログが同じ Store の値で更新されます。</span></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>ダイアログ側</h2>
+        <p><code>TodoDialog</code> は入力値をローカル state として保持し、フォーカスを外した時点で Redux に渡します。</p>
+        <pre><code>function commitDraft() {
+  if (todo) {
+    onDraftChange({ ...todo, title, description, completed })
+  }
+}
+
+&lt;input
+  value={title}
+  onChange={(event) =&gt; setTitle(event.target.value)}
+  onBlur={commitDraft}
+/&gt;</code></pre>
+        <p>編集中の入力体験を保つために local state を使い、他の画面へ共有する値だけを Redux に反映します。</p>
+      </section>
+
+      <section>
+        <h2>Redux Slice</h2>
+        <p><code>todoChanged</code> は ID が一致する Todo のみを差し替えます。ほかの Todo やリクエスト状態には影響しません。</p>
+        <pre><code>todoChanged(state, action: PayloadAction&lt;Todo&gt;) {
+  const index = state.todos.findIndex(
+    (todo) =&gt; todo.id === action.payload.id,
+  )
+
+  if (index !== -1) {
+    state.todos[index] = action.payload
+  }
+}</code></pre>
+      </section>
+
+      <section>
+        <h2>Hook の責務</h2>
+        <p><code>useTodos</code> が UI と Redux を接続します。ダイアログは Repository や API 実装を知らずに済みます。</p>
+        <pre><code>const updateDraft = useCallback(
+  (todo: Todo) =&gt; {
+    dispatch(todoActions.todoChanged(todo))
+  },
+  [dispatch],
+)</code></pre>
+        <ul>
+          <li><code>todoChanged</code>: blur 時の即時表示更新。API 呼び出しは行いません。</li>
+          <li><code>update</code>: 保存ボタンでユースケースを実行し、API へ永続化します。</li>
+          <li><code>requestSucceeded</code>: API から再取得した正しい一覧で Store を確定します。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>設計上のポイント</h2>
+        <p class="note">
+          一覧とダイアログが別々の state を持つと表示のずれが起こります。共有データである Todo は Redux に一元化し、表示専用の入力途中値だけをダイアログの local state に残します。
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
