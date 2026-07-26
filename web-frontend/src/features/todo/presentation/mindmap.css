@@ -111,6 +111,10 @@
   border-color: #2f694c;
 }
 
+.mindmap-node__type {
+  flex: none;
+}
+
 .mindmap-node__title {
   overflow: hidden;
   flex: 1;

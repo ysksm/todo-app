@@ -1,7 +1,12 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from core.errors import CyclicMoveError, ParentNotFoundError, TodoNotFoundError
+from core.errors import (
+    CyclicMoveError,
+    InvalidHierarchyError,
+    ParentNotFoundError,
+    TodoNotFoundError,
+)
 
 # core の例外を HTTP の応答へ翻訳する。ルーターは変換を意識しない。
 ERROR_RESPONSES: dict[type[Exception], tuple[int, str]] = {
@@ -10,6 +15,10 @@ ERROR_RESPONSES: dict[type[Exception], tuple[int, str]] = {
     CyclicMoveError: (
         status.HTTP_400_BAD_REQUEST,
         "Cannot move a todo under its own descendant",
+    ),
+    InvalidHierarchyError: (
+        status.HTTP_400_BAD_REQUEST,
+        "Cannot place this todo type under that parent type",
     ),
 }
 

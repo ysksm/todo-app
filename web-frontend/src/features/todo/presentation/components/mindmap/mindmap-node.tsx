@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { TODO_TYPE_LABELS } from '../../../domain/entities/todo-type'
 import type { TodoNode } from '../../../domain/entities/todo-tree'
 import { NODE_HEIGHT, NODE_WIDTH, type NodePosition } from '../../hooks/use-mindmap-layout'
 
@@ -78,12 +79,17 @@ export function MindmapNode({
       )}
 
       {isEditing ? (
+        <>
+        <span className={`mindmap-node__type mindmap-node__type--${todo.type}`}>
+          {TODO_TYPE_LABELS[todo.type]}
+        </span>
         <MindmapNodeEditor
           initialTitle={todo.title}
           isSaving={isSaving}
           onCommit={onCommitEditing}
           onCancel={onCancelEditing}
         />
+        </>
       ) : (
         <>
           <input
@@ -96,6 +102,9 @@ export function MindmapNode({
             onClick={(event) => event.stopPropagation()}
             onChange={() => onToggleCompleted(node)}
           />
+          <span className={`mindmap-node__type mindmap-node__type--${todo.type}`}>
+            {TODO_TYPE_LABELS[todo.type]}
+          </span>
           <span className="mindmap-node__title">{todo.title}</span>
           {hasChildren && isCollapsed && (
             <span className="mindmap-node__badge">{children.length}</span>

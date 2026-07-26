@@ -1,6 +1,7 @@
 import { useCallback, useMemo, type KeyboardEvent } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { Todo, TodoDraft, TodoMove, TodoUpdate } from '../../domain/entities/todo'
+import { defaultChildType } from '../../domain/entities/todo-type'
 import {
   buildTodoTree,
   findFirstChild,
@@ -43,6 +44,9 @@ export interface MindmapNavigation {
 }
 
 const EMPTY_DRAFT_TITLE = ''
+
+/** ルートに足すときの種類。階層のいちばん上から始める。 */
+const ROOT_TYPE = defaultChildType(null) ?? 'task'
 
 export function useMindmapNavigation(options: MindmapNavigationOptions): MindmapNavigation {
   const { todos, isSaving, onCreate, onUpdate, onMove, onDelete } = options
@@ -142,6 +146,7 @@ export function useMindmapNavigation(options: MindmapNavigationOptions): Mindmap
           title: trimmedTitle,
           description: '',
           completed: false,
+          type: draftNode.type,
           parentId: draftNode.parentId,
         })
         dispatch(todoActions.draftDiscarded())
@@ -163,6 +168,7 @@ export function useMindmapNavigation(options: MindmapNavigationOptions): Mindmap
           title: trimmedTitle,
           description: editedTodo.description,
           completed: editedTodo.completed,
+          type: editedTodo.type,
         })
       }
       dispatch(todoActions.editingStopped())
@@ -202,7 +208,7 @@ export function useMindmapNavigation(options: MindmapNavigationOptions): Mindmap
       if (!focusedNode) {
         if (event.key === 'Enter' && !isSaving) {
           event.preventDefault()
-          startDraft({ parentId: null, position: 0 })
+          startDraft({ parentId: null, position: 0, type: ROOT_TYPE })
         }
         return
       }
@@ -263,9 +269,11 @@ export function useMindmapNavigation(options: MindmapNavigationOptions): Mindmap
           if (isSaving) {
             return
           }
+          // 兄弟なので、いま居るノードと同じ種類がそのまま入る。
           startDraft({
             parentId: findParent(roots, id)?.todo.id ?? null,
             position: node.todo.position + 0.5,
+            type: node.todo.type,
           })
           return
         }
@@ -274,10 +282,16 @@ export function useMindmapNavigation(options: MindmapNavigationOptions): Mindmap
           if (isSaving) {
             return
           }
+          // Bug は葉なので子を持てない。その場合は何も起きない。
+          const childType = defaultChildType(node.todo.type)
+          if (childType === null) {
+            return
+          }
           dispatch(todoActions.expanded(id))
           startDraft({
             parentId: id,
             position: nextChildPosition(node),
+            type: childType,
           })
           return
         }
@@ -300,6 +314,7 @@ export function useMindmapNavigation(options: MindmapNavigationOptions): Mindmap
             title: node.todo.title,
             description: node.todo.description,
             completed: !node.todo.completed,
+            type: node.todo.type,
           })
           return
         }
@@ -342,6 +357,7 @@ function toDraftTodo(draftNode: TodoDraftNode): Todo {
     title: EMPTY_DRAFT_TITLE,
     description: '',
     completed: false,
+    type: draftNode.type,
     parentId: draftNode.parentId,
     position: draftNode.position,
   }

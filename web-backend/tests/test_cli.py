@@ -19,18 +19,18 @@ def run_cli(tmp_path: Path, capsys):
 
 
 def test_add_and_tree(run_cli) -> None:
-    run_cli("add", "アプリを作る")
-    run_cli("add", "バックエンド", "--parent", "1")
-    run_cli("add", "move API", "--parent", "2")
+    run_cli("add", "アプリを作る", "--type", "product")
+    run_cli("add", "バックエンド", "--parent", "1", "--type", "epic")
+    run_cli("add", "move API", "--parent", "2", "--type", "user_story")
 
     exit_code, out, _ = run_cli("tree")
 
     assert exit_code == 0
     assert out == "\n".join(
         [
-            "[ ] #1 アプリを作る",
-            "  [ ] #2 バックエンド",
-            "    [ ] #3 move API",
+            "[ ] #1 (product) アプリを作る",
+            "  [ ] #2 (epic) バックエンド",
+            "    [ ] #3 (user_story) move API",
         ]
     )
 
@@ -39,7 +39,7 @@ def test_add_reports_the_created_todo(run_cli) -> None:
     exit_code, out, _ = run_cli("add", "root", "--description", "詳細")
 
     assert exit_code == 0
-    assert out == "[ ] #1 root — 詳細 parent=root position=0"
+    assert out == "[ ] #1 (task) root — 詳細 parent=root position=0"
 
 
 def test_list_is_empty_at_first(run_cli) -> None:
@@ -59,6 +59,7 @@ def test_json_output(run_cli) -> None:
         "title": "root",
         "description": "",
         "completed": False,
+        "type": "task",
         "parent_id": None,
         "position": 0,
     }
@@ -79,20 +80,20 @@ def test_update_keeps_unspecified_fields(run_cli) -> None:
 
 
 def test_move_changes_parent_and_position(run_cli) -> None:
-    run_cli("add", "root")
-    run_cli("add", "first", "--parent", "1")
-    run_cli("add", "second", "--parent", "1")
+    run_cli("add", "root", "--type", "product")
+    run_cli("add", "first", "--parent", "1", "--type", "epic")
+    run_cli("add", "second", "--parent", "1", "--type", "epic")
 
     _, out, _ = run_cli("--json", "move", "3", "--parent", "1", "--position", "0")
 
     assert json.loads(out)["position"] == 0
     _, tree, _ = run_cli("tree")
-    assert tree.splitlines()[1].strip() == "[ ] #3 second"
+    assert tree.splitlines()[1].strip() == "[ ] #3 (epic) second"
 
 
 def test_move_without_parent_goes_to_root(run_cli) -> None:
-    run_cli("add", "root")
-    run_cli("add", "child", "--parent", "1")
+    run_cli("add", "root", "--type", "product")
+    run_cli("add", "child", "--parent", "1", "--type", "epic")
 
     _, out, _ = run_cli("--json", "move", "2")
 
@@ -100,8 +101,8 @@ def test_move_without_parent_goes_to_root(run_cli) -> None:
 
 
 def test_delete_reports_every_removed_id(run_cli) -> None:
-    run_cli("add", "root")
-    run_cli("add", "child", "--parent", "1")
+    run_cli("add", "root", "--type", "product")
+    run_cli("add", "child", "--parent", "1", "--type", "epic")
 
     exit_code, out, _ = run_cli("delete", "1")
 
@@ -124,9 +125,34 @@ def test_add_with_unknown_parent_fails(run_cli) -> None:
     assert "Parent todo 999 not found" in err
 
 
+def test_update_changes_the_type(run_cli) -> None:
+    run_cli("add", "root", "--type", "product")
+
+    _, out, _ = run_cli("--json", "update", "1", "--type", "epic")
+
+    assert json.loads(out)["type"] == "epic"
+
+
+def test_update_keeps_the_type_when_it_is_not_given(run_cli) -> None:
+    run_cli("add", "root", "--type", "product")
+
+    _, out, _ = run_cli("--json", "update", "1", "--title", "renamed")
+
+    assert json.loads(out)["type"] == "product"
+
+
+def test_add_under_a_lower_type_fails(run_cli) -> None:
+    run_cli("add", "task", "--type", "task")
+
+    exit_code, _, err = run_cli("add", "epic", "--parent", "1", "--type", "epic")
+
+    assert exit_code == 1
+    assert "Cannot place a epic under a task" in err
+
+
 def test_cyclic_move_fails(run_cli) -> None:
-    run_cli("add", "root")
-    run_cli("add", "child", "--parent", "1")
+    run_cli("add", "root", "--type", "product")
+    run_cli("add", "child", "--parent", "1", "--type", "epic")
 
     exit_code, _, err = run_cli("move", "1", "--parent", "2")
 

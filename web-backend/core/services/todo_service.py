@@ -28,18 +28,27 @@ class TodoService:
         return todo
 
     def create_todo(self, todo_create: TodoCreate) -> Todo:
-        """親を指定した場合はその末尾に追加する。親が無ければ ParentNotFoundError。"""
+        """親を指定した場合はその末尾に追加する。親が無ければ ParentNotFoundError。
+
+        種類の上下関係に反する親子は InvalidHierarchyError。
+        """
         return self.repository.create(todo_create)
 
     def update_todo(self, todo_id: int, todo_update: TodoUpdate) -> Todo:
-        """本文だけを更新する。親子関係と並び順は保持される。"""
+        """本文と種類を更新する。親子関係と並び順は保持される。
+
+        いまの親や子と辻褄が合わない種類へは変えられず、InvalidHierarchyError になる。
+        """
         todo = self.repository.update(todo_id, todo_update)
         if todo is None:
             raise TodoNotFoundError(todo_id)
         return todo
 
     def move_todo(self, todo_id: int, todo_move: TodoMove) -> Todo:
-        """親と並び順を変更する。循環する移動は CyclicMoveError。"""
+        """親と並び順を変更する。
+
+        循環する移動は CyclicMoveError、種類の上下関係に反する移動は InvalidHierarchyError。
+        """
         todo = self.repository.move(todo_id, todo_move)
         if todo is None:
             raise TodoNotFoundError(todo_id)
@@ -60,7 +69,8 @@ class TodoService:
 
         depths = self._depths(todos)
         return "\n".join(
-            f"{'  ' * depths[todo.id]}{'[x]' if todo.completed else '[ ]'} #{todo.id} {todo.title}"
+            f"{'  ' * depths[todo.id]}{'[x]' if todo.completed else '[ ]'} "
+            f"#{todo.id} ({todo.type}) {todo.title}"
             + (f" — {todo.description}" if todo.description else "")
             for todo in todos
         )

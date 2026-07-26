@@ -4,10 +4,17 @@ import { Provider } from 'react-redux'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createAppStore } from '@/app/store/create-app-store'
 import type { Todo } from '../../../domain/entities/todo'
+import type { TodoType } from '../../../domain/entities/todo-type'
 import { MindmapView } from './mindmap-view'
 
-function todo(id: number, parentId: number | null, position: number, title = `todo-${id}`): Todo {
-  return { id, title, description: '', completed: false, parentId, position }
+function todo(
+  id: number,
+  parentId: number | null,
+  position: number,
+  title = `todo-${id}`,
+  type: TodoType = 'task',
+): Todo {
+  return { id, title, description: '', completed: false, type, parentId, position }
 }
 
 /**
@@ -16,11 +23,11 @@ function todo(id: number, parentId: number | null, position: number, title = `to
  *   second root(5)
  */
 const TODOS: readonly Todo[] = [
-  todo(1, null, 0, 'root'),
-  todo(2, 1, 0, 'child a'),
-  todo(3, 1, 1, 'child b'),
-  todo(4, 2, 0, 'grandchild'),
-  todo(5, null, 1, 'second root'),
+  todo(1, null, 0, 'root', 'product'),
+  todo(2, 1, 0, 'child a', 'epic'),
+  todo(3, 1, 1, 'child b', 'epic'),
+  todo(4, 2, 0, 'grandchild', 'user_story'),
+  todo(5, null, 1, 'second root', 'product'),
 ]
 
 function renderMindmap(overrides: Partial<Parameters<typeof MindmapView>[0]> = {}) {
@@ -269,6 +276,8 @@ describe('MindmapView adding and removing', () => {
         title: '新しい兄弟',
         description: '',
         completed: false,
+        // 兄弟なので、いま居るノードと同じ種類で作られる
+        type: 'epic',
         parentId: 1,
       })
     })
@@ -297,8 +306,20 @@ describe('MindmapView adding and removing', () => {
     await user.keyboard('子タスク{Enter}')
 
     await waitFor(() => {
-      expect(onCreate).toHaveBeenCalledWith(expect.objectContaining({ parentId: 3 }))
+      // Epic の子なので 1 つ下の UserStory になる
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ parentId: 3, type: 'user_story' }),
+      )
     })
+  })
+
+  it('does not add a child under a bug', async () => {
+    const { onCreate } = renderMindmap({ todos: [todo(1, null, 0, 'バグ', 'bug')] })
+
+    await user.keyboard('{Tab}')
+
+    expect(screen.queryByLabelText('タスク名')).not.toBeInTheDocument()
+    expect(onCreate).not.toHaveBeenCalled()
   })
 
   it('creates the first root with Enter when the map is empty', async () => {
@@ -309,7 +330,7 @@ describe('MindmapView adding and removing', () => {
 
     await waitFor(() => {
       expect(onCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ title: '最初のタスク', parentId: null }),
+        expect.objectContaining({ title: '最初のタスク', parentId: null, type: 'product' }),
       )
     })
   })

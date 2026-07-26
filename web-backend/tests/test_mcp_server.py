@@ -42,8 +42,10 @@ def test_exposes_every_core_operation(mcp_server) -> None:
 
 
 def test_create_and_list_through_tools(mcp_server) -> None:
-    root = call_tool(mcp_server, "create_todo", title="アプリを作る")
-    call_tool(mcp_server, "create_todo", title="バックエンド", parent_id=root["id"])
+    root = call_tool(mcp_server, "create_todo", title="アプリを作る", type="product")
+    call_tool(
+        mcp_server, "create_todo", title="バックエンド", parent_id=root["id"], type="epic"
+    )
 
     todos = call_tool(mcp_server, "list_todos")
 
@@ -52,28 +54,37 @@ def test_create_and_list_through_tools(mcp_server) -> None:
 
 
 def test_render_tree_through_tools(mcp_server) -> None:
-    root = call_tool(mcp_server, "create_todo", title="root")
-    call_tool(mcp_server, "create_todo", title="child", parent_id=root["id"])
+    root = call_tool(mcp_server, "create_todo", title="root", type="product")
+    call_tool(mcp_server, "create_todo", title="child", parent_id=root["id"], type="epic")
 
-    assert call_tool(mcp_server, "render_todo_tree") == "[ ] #1 root\n  [ ] #2 child"
+    assert (
+        call_tool(mcp_server, "render_todo_tree")
+        == "[ ] #1 (product) root\n  [ ] #2 (epic) child"
+    )
 
 
 def test_update_and_move_through_tools(mcp_server) -> None:
-    root = call_tool(mcp_server, "create_todo", title="root")
-    first = call_tool(mcp_server, "create_todo", title="first", parent_id=root["id"])
-    second = call_tool(mcp_server, "create_todo", title="second", parent_id=root["id"])
+    root = call_tool(mcp_server, "create_todo", title="root", type="product")
+    first = call_tool(
+        mcp_server, "create_todo", title="first", parent_id=root["id"], type="epic"
+    )
+    second = call_tool(
+        mcp_server, "create_todo", title="second", parent_id=root["id"], type="epic"
+    )
 
     updated = call_tool(mcp_server, "update_todo", todo_id=first["id"], title="renamed")
     assert updated["title"] == "renamed"
     assert updated["parent_id"] == root["id"]
+    # type を省略した更新は今の種類を保つ
+    assert updated["type"] == "epic"
 
     moved = call_tool(mcp_server, "move_todo", todo_id=second["id"], parent_id=root["id"], position=0)
     assert moved["position"] == 0
 
 
 def test_delete_through_tools_reports_descendants(mcp_server) -> None:
-    root = call_tool(mcp_server, "create_todo", title="root")
-    child = call_tool(mcp_server, "create_todo", title="child", parent_id=root["id"])
+    root = call_tool(mcp_server, "create_todo", title="root", type="product")
+    child = call_tool(mcp_server, "create_todo", title="child", parent_id=root["id"], type="epic")
 
     assert call_tool(mcp_server, "delete_todo", todo_id=root["id"]) == {
         "deleted_ids": [root["id"], child["id"]]
@@ -83,6 +94,13 @@ def test_delete_through_tools_reports_descendants(mcp_server) -> None:
 def test_tool_errors_are_reported(mcp_server) -> None:
     with pytest.raises(Exception, match="not found"):
         call_tool(mcp_server, "get_todo", todo_id=999)
+
+
+def test_create_rejects_a_type_the_parent_cannot_hold(mcp_server) -> None:
+    task = call_tool(mcp_server, "create_todo", title="task", type="task")
+
+    with pytest.raises(Exception, match="Cannot place"):
+        call_tool(mcp_server, "create_todo", title="epic", parent_id=task["id"], type="epic")
 
 
 class TestMcpEndpointAuth:

@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { Todo } from '../../domain/entities/todo'
+import type { TodoType } from '../../domain/entities/todo-type'
 
 type TodoRequestStatus = 'idle' | 'loading' | 'saving'
 
@@ -12,6 +13,8 @@ export const DRAFT_TODO_ID = -1
 export interface TodoDraftNode {
   parentId: number | null
   position: number
+  /** 親の下に置ける種類。どこへ足すかを決めた時点で決まる。 */
+  type: TodoType
 }
 
 export interface TodoStoreState {

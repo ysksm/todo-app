@@ -1,7 +1,10 @@
+import type { TodoType } from './todo-type'
+
 export interface TodoContent {
   readonly title: string
   readonly description: string
   readonly completed: boolean
+  readonly type: TodoType
 }
 
 export interface Todo extends TodoContent {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { Todo, TodoDraft, TodoMove, TodoUpdate } from '../../domain/entities/todo'
+import type { TodoType } from '../../domain/entities/todo-type'
 import type { TodoDependencies } from '../../di/todo-dependencies'
 import { confirmCascadingDelete } from '../confirm-cascading-delete'
 import {
@@ -18,7 +19,7 @@ interface TodoState {
   selectedTodo: Todo | null
   viewMode: TodoViewMode
   reload(): Promise<void>
-  create(title: string): Promise<boolean>
+  create(title: string, type: TodoType): Promise<boolean>
   createTodo(draft: TodoDraft): Promise<Todo | null>
   update(todo: TodoUpdate): Promise<boolean>
   move(todo: TodoMove): Promise<boolean>
@@ -71,11 +72,12 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
   )
 
   const create = useCallback(
-    async (title: string) => {
+    async (title: string, type: TodoType) => {
       const created = await createTodo({
         title,
         description: '',
         completed: false,
+        type,
         parentId: null,
       })
       return created !== null

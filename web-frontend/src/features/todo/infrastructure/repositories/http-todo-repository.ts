@@ -25,6 +25,7 @@ export class HttpTodoRepository implements TodoRepository {
         title: draft.title,
         description: draft.description,
         completed: draft.completed,
+        type: draft.type,
         parent_id: draft.parentId,
       }),
     })
@@ -39,6 +40,7 @@ export class HttpTodoRepository implements TodoRepository {
         title: todo.title,
         description: todo.description,
         completed: todo.completed,
+        type: todo.type,
       }),
     })
     return toTodo(updatedTodo)
@@ -67,6 +69,7 @@ function toTodo(response: TodoResponse): Todo {
     title: response.title,
     description: response.description,
     completed: response.completed,
+    type: response.type,
     parentId: response.parent_id,
     position: response.position,
   }

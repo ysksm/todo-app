@@ -22,3 +22,15 @@ class CyclicMoveError(TodoError):
         super().__init__(f"Cannot move todo {todo_id} under its own descendant {parent_id}")
         self.todo_id = todo_id
         self.parent_id = parent_id
+
+
+class InvalidHierarchyError(TodoError):
+    """種類の上下関係に反する親子を作ろうとした。
+
+    親の種類・子の種類は core.models.todo_type の階層で判定する。
+    """
+
+    def __init__(self, child_type: str, parent_type: str) -> None:
+        super().__init__(f"Cannot place a {child_type} under a {parent_type}")
+        self.child_type = child_type
+        self.parent_type = parent_type

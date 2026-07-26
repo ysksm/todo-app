@@ -3,7 +3,7 @@ import type { Todo } from '../domain/entities/todo'
 import { confirmCascadingDelete } from './confirm-cascading-delete'
 
 function todo(id: number, parentId: number | null, title = `todo-${id}`): Todo {
-  return { id, title, description: '', completed: false, parentId, position: 0 }
+  return { id, title, description: '', completed: false, type: 'task', parentId, position: 0 }
 }
 
 /**

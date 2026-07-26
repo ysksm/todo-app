@@ -3,12 +3,26 @@ from pathlib import Path
 import pytest
 
 from core.models.todo import Todo, TodoCreate, TodoMove, TodoUpdate
-from core.errors import CyclicMoveError, ParentNotFoundError
+from core.models.todo_type import TodoType, default_child_type
+from core.errors import CyclicMoveError, InvalidHierarchyError, ParentNotFoundError
 from core.repositories.todo_repository import TodoRepository
 
 
-def create(repository: TodoRepository, title: str, parent_id: int | None = None) -> Todo:
-    return repository.create(TodoCreate(title=title, parent_id=parent_id))
+def create(
+    repository: TodoRepository,
+    title: str,
+    parent_id: int | None = None,
+    todo_type: TodoType | None = None,
+) -> Todo:
+    """種類を省略したら親の 1 つ下の階層（ルートなら product）で作る。"""
+    parent = repository.get(parent_id) if parent_id is not None else None
+    return repository.create(
+        TodoCreate(
+            title=title,
+            parent_id=parent_id,
+            type=todo_type or default_child_type(parent.type if parent else None) or TodoType.TASK,
+        )
+    )
 
 
 def titles(todos: list[Todo]) -> list[str]:
@@ -34,7 +48,7 @@ def test_create_rejects_missing_parent(repository: TodoRepository) -> None:
 
 def test_list_returns_depth_first_order(repository: TodoRepository) -> None:
     root = create(repository, "root")
-    child = create(repository, "child")
+    child = create(repository, "child", todo_type=TodoType.EPIC)
     repository.move(child.id, TodoMove(parent_id=root.id))
     create(repository, "grandchild", parent_id=child.id)
     create(repository, "sibling", parent_id=root.id)
@@ -56,12 +70,13 @@ def test_update_keeps_parent_and_position(repository: TodoRepository) -> None:
 
     updated = repository.update(
         second_child.id,
-        TodoUpdate(title="renamed", description="detail", completed=True),
+        TodoUpdate(title="renamed", description="detail", completed=True, type=TodoType.EPIC),
     )
 
     assert updated is not None
     assert updated.title == "renamed"
     assert updated.completed is True
+    assert updated.type is TodoType.EPIC
     assert updated.parent_id == root.id
     assert updated.position == 1
 
@@ -126,6 +141,27 @@ def test_move_rejects_cycles(repository: TodoRepository) -> None:
         repository.move(root.id, TodoMove(parent_id=root.id))
 
 
+def test_create_rejects_a_type_the_parent_cannot_hold(repository: TodoRepository) -> None:
+    task = create(repository, "task", todo_type=TodoType.TASK)
+
+    with pytest.raises(InvalidHierarchyError) as error:
+        create(repository, "epic", parent_id=task.id, todo_type=TodoType.EPIC)
+
+    assert (error.value.child_type, error.value.parent_type) == (TodoType.EPIC, TodoType.TASK)
+    assert titles(repository.list()) == ["task"]
+
+
+def test_move_rejects_a_parent_that_is_not_higher(repository: TodoRepository) -> None:
+    product = create(repository, "product")
+    epic = create(repository, "epic", parent_id=product.id)
+    bug = create(repository, "bug", parent_id=product.id, todo_type=TodoType.BUG)
+
+    with pytest.raises(InvalidHierarchyError):
+        repository.move(epic.id, TodoMove(parent_id=bug.id))
+
+    assert repository.get(epic.id).parent_id == product.id
+
+
 def test_move_rejects_missing_parent(repository: TodoRepository) -> None:
     todo = create(repository, "todo")
 
@@ -178,6 +214,24 @@ def test_reads_legacy_rows_without_parent_id(tmp_path: Path) -> None:
     assert titles(todos) == ["old one", "old two"]
     assert [todo.parent_id for todo in todos] == [None, None]
     assert [todo.position for todo in todos] == [0, 1]
+    # type を持たない行は task 扱い。読み込みでは種類の妥当性を問わない。
+    assert [todo.type for todo in todos] == [TodoType.TASK, TodoType.TASK]
+
+
+def test_reads_rows_whose_types_break_the_hierarchy(tmp_path: Path) -> None:
+    """種類を入れる前に作られた入れ子は、読むだけなら壊さずそのまま返す。"""
+    data_file = tmp_path / "todos.jsonl"
+    data_file.write_text(
+        '{"id": 1, "title": "parent", "parent_id": null, "position": 0}\n'
+        '{"id": 2, "title": "child", "parent_id": 1, "position": 0}\n',
+        encoding="utf-8",
+    )
+    repository = TodoRepository(data_file=data_file)
+
+    todos = repository.list()
+
+    assert titles(todos) == ["parent", "child"]
+    assert todos[1].parent_id == 1
 
 
 def test_normalizes_orphans_and_duplicate_positions(tmp_path: Path) -> None:

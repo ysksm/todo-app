@@ -27,6 +27,36 @@ TODO は親を 0 個または 1 個持ち、同じ親の中で並び順（`posit
 親を持たない TODO はルートで、複数存在してよい。
 親を削除すると、その子孫もまとめて削除される。
 
+## タスクの種類
+
+各 TODO は種類を 1 つ持つ（API では `type`、既定は `task`）。
+
+| 種類 | 値 |
+| --- | --- |
+| Product | `product` |
+| Epic | `epic` |
+| UserStory | `user_story` |
+| Task | `task` |
+| SubTask | `subtask` |
+| Bug | `bug` |
+
+`Product > Epic > UserStory > Task > SubTask` は上下の決まった 1 本の階層で、
+親は必ず子より上位でなければならない。
+
+- 階層飛ばしは作れる — Product の直下に Task を置いてよい
+- 逆向きは作れない — Task の下に Epic は置けない
+- 同じ階層どうしも作れない — Task の下に Task は置けない
+- ルートにはどの種類でも置ける
+- Bug は階層の外。どの種類の下にも置けるが、Bug 自身は子を持てない
+
+この決まりは追加・移動・種類の変更のすべてで効き、破る操作は 400（CLI / MCP ではエラー）になる。
+判定はバックエンドの `core/models/todo_type.py` が唯一の決定元で、画面はそもそも選べない
+種類を出さないようにしているだけ。
+
+種類を持たずに保存された古いデータは `task` として読む。読み込み時に階層の妥当性は問わない
+（既存の入れ子を壊さないため）。合わない組み合わせは、次にその TODO を動かす／種類を変える
+ときに直すことになる。
+
 詳しい仕様は [docs/mindmap-todo/](docs/mindmap-todo/) を参照。
 ブラウザで読む場合は [docs/mindmap-todo/index.html](docs/mindmap-todo/index.html) を開く。
 
@@ -45,8 +75,8 @@ TODO は親を 0 個または 1 個持ち、同じ親の中で並び順（`posit
 | `↑` / `↓` | 同じ親の兄弟タスクへ移動 |
 | `Home` / `End` | 兄弟の先頭 / 末尾へ移動 |
 | `F2` | タイトルを編集（編集中は `Enter` で確定、`Esc` で取り消し） |
-| `Enter` | 兄弟タスクを追加 |
-| `Tab` | 子タスクを追加 |
+| `Enter` | 兄弟タスクを追加（いま居るタスクと同じ種類） |
+| `Tab` | 子タスクを追加（1 つ下の階層の種類。Bug の下には追加できない） |
 | `Delete` / `BS` | タスクを削除（子タスクも削除。確認あり） |
 | `Space` | 完了・未完了を切り替え |
 
@@ -80,7 +110,9 @@ claude mcp add --transport http todo-app http://127.0.0.1:8000/mcp \
 ```sh
 cd web-backend
 uv run python -m interfaces.cli tree
-uv run python -m interfaces.cli add "バックエンド" --parent 1
+uv run python -m interfaces.cli add "アプリを作る" --type product
+uv run python -m interfaces.cli add "バックエンド" --parent 1 --type epic
+uv run python -m interfaces.cli update 2 --type user_story
 ```
 
 ## テスト

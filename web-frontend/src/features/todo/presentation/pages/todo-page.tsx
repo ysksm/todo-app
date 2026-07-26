@@ -99,6 +99,7 @@ export function TodoPage({ dependencies, mcpDependencies }: TodoPageProps) {
       </section>
       <TodoDialog
         todo={selectedTodo}
+        todos={todos}
         isSaving={isSaving}
         onDraftChange={updateDraft}
         onUpdate={update}

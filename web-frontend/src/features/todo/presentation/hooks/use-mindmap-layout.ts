@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import type { TodoNode } from '../../domain/entities/todo-tree'
 
-export const NODE_WIDTH = 220
+// 種類のバッジとタイトルが並ぶ幅。
+export const NODE_WIDTH = 268
 export const NODE_HEIGHT = 44
 export const H_GAP = 64
 export const V_GAP = 12

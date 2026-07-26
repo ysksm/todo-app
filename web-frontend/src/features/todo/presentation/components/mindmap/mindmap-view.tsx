@@ -66,6 +66,7 @@ export function MindmapView({
       title: node.todo.title,
       description: node.todo.description,
       completed: !node.todo.completed,
+      type: node.todo.type,
     })
   }
 

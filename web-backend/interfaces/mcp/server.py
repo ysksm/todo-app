@@ -7,6 +7,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
 from core.models.todo import TodoCreate, TodoMove, TodoUpdate
+from core.models.todo_type import TodoType
 from core.services.todo_service import TodoService
 
 INSTRUCTIONS = """\
@@ -14,6 +15,12 @@ INSTRUCTIONS = """\
 
 - タスクは親を 0 個か 1 個持ち、同じ親の中では position（0 始まり）で並ぶ。
 - 親を持たないタスクはルートで、複数あってよい。
+- タスクには種類がある: product / epic / user_story / task / subtask / bug（既定は task）。
+- product > epic > user_story > task > subtask は上下の決まった階層で、
+  親は必ず子より上位でなければならない。階層飛ばし（product の直下に task）は許すが、
+  逆向き（task の下に epic）や同じ階層どうし（task の下に task）は作れない。
+- bug はこの階層の外にいる。どの種類の下にも、ルートにも置けるが、bug 自身は子を持てない。
+- 上の決まりに反する create_todo / update_todo / move_todo は失敗する。
 - 全体像をつかむときは render_todo_tree を使うと階層が見やすい。
 - delete_todo は子孫もまとめて消すので、実行前に影響範囲を確認すること。
 """
@@ -66,14 +73,19 @@ def create_mcp_server(
         description: str = "",
         completed: bool = False,
         parent_id: int | None = None,
+        type: TodoType = TodoType.TASK,
     ) -> dict[str, Any]:
-        """タスクを追加する。parent_id を渡すとその子として末尾に追加する。"""
+        """タスクを追加する。parent_id を渡すとその子として末尾に追加する。
+
+        type は親より下位の種類でなければならない（bug はどこにでも置ける）。
+        """
         return service.create_todo(
             TodoCreate(
                 title=title,
                 description=description,
                 completed=completed,
                 parent_id=parent_id,
+                type=type,
             )
         ).model_dump()
 
@@ -83,11 +95,20 @@ def create_mcp_server(
         title: str,
         description: str = "",
         completed: bool = False,
+        type: TodoType | None = None,
     ) -> dict[str, Any]:
-        """タスクの本文を更新する。親子関係と並び順は変わらない。"""
+        """タスクの本文と種類を更新する。親子関係と並び順は変わらない。
+
+        type を省略すると今の種類のまま。渡す場合は、いまの親・子と辻褄が合う種類に限る。
+        """
         return service.update_todo(
             todo_id,
-            TodoUpdate(title=title, description=description, completed=completed),
+            TodoUpdate(
+                title=title,
+                description=description,
+                completed=completed,
+                type=type if type is not None else service.get_todo(todo_id).type,
+            ),
         ).model_dump()
 
     @mcp.tool()
