@@ -6,7 +6,7 @@ interface AppProps {
 }
 
 function App({ dependencies }: AppProps) {
-  return <TodoPage dependencies={dependencies.todo} />
+  return <TodoPage dependencies={dependencies.todo} mcpDependencies={dependencies.mcp} />
 }
 
 export default App

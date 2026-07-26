@@ -1,3 +1,5 @@
 *.pyc
 data/todos.jsonl
+data/todos.jsonl.lock
+data/mcp_api_key
 .env

@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import type { Todo } from '../../domain/entities/todo'
+import { buildTodoTree, flattenTree } from '../../domain/entities/todo-tree'
 import { TodoListItem } from './todo-list-item'
 
 interface TodoListProps {
@@ -10,16 +12,19 @@ interface TodoListProps {
 }
 
 export function TodoList({ todos, isSaving, onUpdate, onDelete, onOpen }: TodoListProps) {
-  if (todos.length === 0) {
+  const nodes = useMemo(() => flattenTree(buildTodoTree(todos)), [todos])
+
+  if (nodes.length === 0) {
     return <p className="todo-empty">登録されている Todo はありません。</p>
   }
 
   return (
     <ul className="todo-list">
-      {todos.map((todo) => (
+      {nodes.map((node) => (
         <TodoListItem
-          key={todo.id}
-          todo={todo}
+          key={node.todo.id}
+          todo={node.todo}
+          depth={node.depth}
           isSaving={isSaving}
           onUpdate={onUpdate}
           onDelete={onDelete}

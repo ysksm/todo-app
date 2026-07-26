@@ -3,4 +3,6 @@ export interface TodoResponse {
   title: string
   description: string
   completed: boolean
+  parent_id: number | null
+  position: number
 }

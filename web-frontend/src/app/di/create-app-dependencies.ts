@@ -1,3 +1,4 @@
+import { createMcpDependencies } from '@/features/mcp/di/create-mcp-dependencies'
 import { createTodoDependencies } from '@/features/todo/di/create-todo-dependencies'
 import { apiBaseUrl } from '@/shared/config/env'
 import { FetchHttpClient } from '@/shared/infrastructure/http/fetch-http-client'
@@ -8,5 +9,6 @@ export function createAppDependencies(): AppDependencies {
 
   return {
     todo: createTodoDependencies(httpClient),
+    mcp: createMcpDependencies(httpClient),
   }
 }

@@ -1,5 +1,5 @@
 import {
-  normalizeTodoDraft,
+  normalizeTodoContent,
   type Todo,
   type TodoUpdate,
 } from '../../domain/entities/todo'
@@ -13,9 +13,6 @@ export class UpdateTodo {
   }
 
   async execute(todo: TodoUpdate): Promise<Todo> {
-    return this.repository.update({
-      id: todo.id,
-      ...normalizeTodoDraft(todo),
-    })
+    return this.repository.update(normalizeTodoContent(todo))
   }
 }

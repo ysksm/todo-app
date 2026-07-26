@@ -1,16 +1,29 @@
+import type { CSSProperties } from 'react'
 import type { Todo } from '../../domain/entities/todo'
 
 interface TodoListItemProps {
   todo: Todo
+  depth: number
   isSaving: boolean
   onUpdate(todo: Todo): Promise<boolean>
   onDelete(id: number): Promise<boolean>
   onOpen(id: number): void
 }
 
-export function TodoListItem({ todo, isSaving, onUpdate, onDelete, onOpen }: TodoListItemProps) {
+export function TodoListItem({
+  todo,
+  depth,
+  isSaving,
+  onUpdate,
+  onDelete,
+  onOpen,
+}: TodoListItemProps) {
   return (
-    <li className={`todo-item${todo.completed ? ' todo-item--completed' : ''}`}>
+    <li
+      className={`todo-item${todo.completed ? ' todo-item--completed' : ''}`}
+      style={{ '--todo-depth': depth } as CSSProperties}
+      data-depth={depth}
+    >
       <label className="todo-item__summary">
         <input
           type="checkbox"

@@ -1,0 +1,130 @@
+.mcp-panel {
+  margin-top: 28px;
+  border: 1px solid #bdc9c1;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.mcp-panel__toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #15211c;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mcp-panel__body {
+  padding: 0 16px 16px;
+  border-top: 1px solid #dde5e0;
+}
+
+.mcp-panel__lead {
+  margin: 14px 0;
+  color: #496053;
+  font-size: 13px;
+}
+
+.mcp-panel__error {
+  margin: 14px 0;
+  color: #8a2c2c;
+  font-size: 13px;
+}
+
+.mcp-command {
+  margin-bottom: 14px;
+}
+
+.mcp-command__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.mcp-command__label {
+  color: #33483b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mcp-command__buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.mcp-command__buttons button {
+  padding: 4px 10px;
+  border: 1px solid #93a99b;
+  border-radius: 4px;
+  background: #fff;
+  color: #33483b;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mcp-command__value {
+  overflow-x: auto;
+  margin: 0;
+  padding: 12px;
+  border-radius: 4px;
+  background: #16231c;
+  color: #e9f2eb;
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.mcp-panel__details {
+  display: grid;
+  margin: 0 0 12px;
+  gap: 6px;
+}
+
+.mcp-panel__details > div {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.mcp-panel__details dt {
+  flex: none;
+  width: 120px;
+  color: #496053;
+}
+
+.mcp-panel__details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.mcp-panel__details code,
+.mcp-panel__lead code {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #eaf0ec;
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.mcp-panel__note,
+.mcp-panel__warning {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-left: 3px solid #93a99b;
+  background: #f2f6f3;
+  color: #496053;
+  font-size: 12px;
+}
+
+.mcp-panel__warning {
+  border-left-color: #b06a2c;
+  background: #fbf2e9;
+  color: #7a4a1c;
+}

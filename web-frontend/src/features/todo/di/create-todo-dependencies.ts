@@ -2,6 +2,7 @@ import type { HttpClient } from '@/shared/infrastructure/http/http-client'
 import { CreateTodo } from '../application/use-cases/create-todo'
 import { DeleteTodo } from '../application/use-cases/delete-todo'
 import { ListTodos } from '../application/use-cases/list-todos'
+import { MoveTodo } from '../application/use-cases/move-todo'
 import { UpdateTodo } from '../application/use-cases/update-todo'
 import { HttpTodoRepository } from '../infrastructure/repositories/http-todo-repository'
 import type { TodoDependencies } from './todo-dependencies'
@@ -13,6 +14,7 @@ export function createTodoDependencies(httpClient: HttpClient): TodoDependencies
     listTodos: new ListTodos(repository),
     createTodo: new CreateTodo(repository),
     updateTodo: new UpdateTodo(repository),
+    moveTodo: new MoveTodo(repository),
     deleteTodo: new DeleteTodo(repository),
   }
 }
