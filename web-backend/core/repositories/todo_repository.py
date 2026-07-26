@@ -7,7 +7,8 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from core.models.todo import Todo, TodoCreate, TodoMove, TodoUpdate
-from core.errors import CyclicMoveError, ParentNotFoundError
+from core.models.todo_type import TodoType, can_be_child_of
+from core.errors import CyclicMoveError, InvalidHierarchyError, ParentNotFoundError
 
 try:
     import fcntl
@@ -40,8 +41,10 @@ class TodoRepository:
         with self._locked():
             todos = self._read_todos()
             parent_id = todo_create.parent_id
-            if parent_id is not None and not any(todo.id == parent_id for todo in todos):
+            parent = next((todo for todo in todos if todo.id == parent_id), None)
+            if parent_id is not None and parent is None:
                 raise ParentNotFoundError(parent_id)
+            self._require_valid_hierarchy(todo_create.type, parent)
 
             next_id = max((todo.id for todo in todos), default=0) + 1
             position = sum(1 for todo in todos if todo.parent_id == parent_id)
@@ -51,11 +54,13 @@ class TodoRepository:
             return todo
 
     def update(self, todo_id: int, todo_update: TodoUpdate) -> Todo | None:
-        """親子関係と並び順は保持したまま、本文だけを更新する。"""
+        """親子関係と並び順は保持したまま、本文と種類を更新する。"""
         with self._locked():
             todos = self._read_todos()
             for index, existing_todo in enumerate(todos):
                 if existing_todo.id == todo_id:
+                    if todo_update.type is not existing_todo.type:
+                        self._require_valid_type_change(todos, existing_todo, todo_update.type)
                     todo = existing_todo.model_copy(update=todo_update.model_dump())
                     todos[index] = todo
                     self._write_todos(todos)
@@ -71,10 +76,12 @@ class TodoRepository:
 
             parent_id = todo_move.parent_id
             if parent_id is not None:
-                if not any(todo.id == parent_id for todo in todos):
+                parent = next((todo for todo in todos if todo.id == parent_id), None)
+                if parent is None:
                     raise ParentNotFoundError(parent_id)
                 if parent_id == todo_id or parent_id in self._descendant_ids(todos, todo_id):
                     raise CyclicMoveError(todo_id, parent_id)
+                self._require_valid_hierarchy(target.type, parent)
 
             siblings = sorted(
                 (todo for todo in todos if todo.parent_id == parent_id and todo.id != todo_id),
@@ -108,6 +115,22 @@ class TodoRepository:
             removed_ids = {todo_id} | self._descendant_ids(todos, todo_id)
             self._write_todos([todo for todo in todos if todo.id not in removed_ids])
             return sorted(removed_ids)
+
+    @staticmethod
+    def _require_valid_hierarchy(child_type: TodoType, parent: Todo | None) -> None:
+        """親の下にその種類を置けるか。ルート（parent=None）にはどの種類でも置ける。"""
+        if parent is not None and not can_be_child_of(child_type, parent.type):
+            raise InvalidHierarchyError(child_type, parent.type)
+
+    @staticmethod
+    def _require_valid_type_change(todos: list[Todo], todo: Todo, new_type: TodoType) -> None:
+        """種類を変えると、いまの親とも子とも辻褄が合わなくなることがあるので両方見る。"""
+        parent = next((candidate for candidate in todos if candidate.id == todo.parent_id), None)
+        TodoRepository._require_valid_hierarchy(new_type, parent)
+
+        for child in todos:
+            if child.parent_id == todo.id and not can_be_child_of(child.type, new_type):
+                raise InvalidHierarchyError(child.type, new_type)
 
     @contextmanager
     def _locked(self) -> Iterator[None]:

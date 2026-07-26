@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { Todo } from '../../domain/entities/todo'
+import { TODO_TYPE_LABELS } from '../../domain/entities/todo-type'
 
 interface TodoListItemProps {
   todo: Todo
@@ -32,6 +33,9 @@ export function TodoListItem({
           onChange={() => void onUpdate({ ...todo, completed: !todo.completed })}
         />
         <button type="button" onClick={() => onOpen(todo.id)} disabled={isSaving}>
+          <span className={`todo-item__type todo-item__type--${todo.type}`}>
+            {TODO_TYPE_LABELS[todo.type]}
+          </span>
           <strong>{todo.title}</strong>
           {todo.description && <small>{todo.description}</small>}
         </button>

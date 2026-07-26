@@ -16,6 +16,12 @@
 >
 > API とデータモデルの仕様そのものは変わっていない。現在の構成は
 > [../interfaces/architecture.md](../interfaces/architecture.md) を参照。
+>
+> その後 `TodoBase` に種類（`type`: product / epic / user_story / task / subtask / bug）が
+> 増え、親子として成立する組み合わせに制限が入った。決まりは
+> `core/models/todo_type.py` と [README](../../README.md#タスクの種類) を参照。
+> ここに書いてある「親子関係は position と parent_id だけで決まる」という前提には、
+> 種類の上下関係というもう 1 つの条件が加わっている。
 
 ---
 

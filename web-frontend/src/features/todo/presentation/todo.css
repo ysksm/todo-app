@@ -62,11 +62,13 @@
 
 .todo-form__controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
 }
 
 .todo-form input,
+.todo-form select,
+.todo-dialog select,
 .todo-dialog input,
 .todo-dialog textarea {
   width: 100%;
@@ -77,6 +79,64 @@
   color: #15211c;
   font: inherit;
   padding: 10px 12px;
+}
+
+.todo-form__type {
+  width: auto;
+}
+
+/* 種類のバッジ。リストでもマインドマップでも同じ色で読めるようにする。 */
+.todo-item__type,
+.mindmap-node__type {
+  --todo-type-color: #4a5f52;
+  --todo-type-background: #eaf0ec;
+  justify-self: start;
+  border: 1px solid color-mix(in srgb, var(--todo-type-color) 35%, transparent);
+  border-radius: 999px;
+  background: var(--todo-type-background);
+  color: var(--todo-type-color);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.todo-item__type--product,
+.mindmap-node__type--product {
+  --todo-type-color: #2f5d8a;
+  --todo-type-background: #e8f0f7;
+}
+
+.todo-item__type--epic,
+.mindmap-node__type--epic {
+  --todo-type-color: #6b4a9c;
+  --todo-type-background: #f0ebf8;
+}
+
+.todo-item__type--user_story,
+.mindmap-node__type--user_story {
+  --todo-type-color: #1f7a6b;
+  --todo-type-background: #e5f4f1;
+}
+
+.todo-item__type--task,
+.mindmap-node__type--task {
+  --todo-type-color: #397354;
+  --todo-type-background: #e8f1eb;
+}
+
+.todo-item__type--subtask,
+.mindmap-node__type--subtask {
+  --todo-type-color: #5b6f61;
+  --todo-type-background: #eef2ef;
+}
+
+.todo-item__type--bug,
+.mindmap-node__type--bug {
+  --todo-type-color: #9a4c43;
+  --todo-type-background: #fbeceb;
 }
 
 .todo-form button,
@@ -261,6 +321,12 @@
   resize: vertical;
 }
 
+.todo-dialog__hint {
+  margin-top: -2px;
+  color: #53685a;
+  font-size: 12px;
+}
+
 .todo-dialog__completed {
   display: flex;
   align-items: center;
@@ -351,6 +417,10 @@
 
   .todo-form__controls {
     grid-template-columns: 1fr;
+  }
+
+  .todo-form__type {
+    width: 100%;
   }
 
   .todo-item {

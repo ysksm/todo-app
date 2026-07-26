@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from core.models.todo import Todo, TodoCreate
+from core.models.todo_type import TodoType, default_child_type
 from core.repositories.todo_repository import TodoRepository
 from core.services.todo_service import TodoService
 from interfaces.mcp.config import McpSettings
@@ -42,7 +43,19 @@ def client(service: TodoService, mcp_settings: McpSettings) -> Iterator[TestClie
 
 @pytest.fixture
 def add_todo(service: TodoService):
-    def add(title: str, parent_id: int | None = None) -> Todo:
-        return service.create_todo(TodoCreate(title=title, parent_id=parent_id))
+    def add(
+        title: str,
+        parent_id: int | None = None,
+        todo_type: TodoType | None = None,
+    ) -> Todo:
+        """種類を省略したら親の 1 つ下の階層（ルートなら product）で作る。"""
+        parent_type = service.get_todo(parent_id).type if parent_id is not None else None
+        return service.create_todo(
+            TodoCreate(
+                title=title,
+                parent_id=parent_id,
+                type=todo_type or default_child_type(parent_type) or TodoType.TASK,
+            )
+        )
 
     return add

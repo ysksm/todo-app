@@ -13,7 +13,7 @@ import {
 } from './todo-tree'
 
 function todo(id: number, parentId: number | null, position: number, title = `todo-${id}`): Todo {
-  return { id, title, description: '', completed: false, parentId, position }
+  return { id, title, description: '', completed: false, type: 'task', parentId, position }
 }
 
 const sampleTodos: readonly Todo[] = [

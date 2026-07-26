@@ -3,8 +3,8 @@
 webapi / mcp と同じ TodoService を呼ぶので、どこから触っても同じデータになる。
 
     uv run python -m interfaces.cli tree
-    uv run python -m interfaces.cli add "アプリを作る"
-    uv run python -m interfaces.cli add "バックエンド" --parent 1
+    uv run python -m interfaces.cli add "アプリを作る" --type product
+    uv run python -m interfaces.cli add "バックエンド" --parent 1 --type epic
     uv run python -m interfaces.cli move 2 --parent 1 --position 0
 """
 
@@ -18,8 +18,12 @@ from pathlib import Path
 
 from core.errors import TodoError
 from core.models.todo import Todo, TodoCreate, TodoMove, TodoUpdate
+from core.models.todo_type import TodoType
 from core.repositories.todo_repository import TodoRepository
 from core.services.todo_service import TodoService
+
+TYPE_CHOICES = [todo_type.value for todo_type in TodoType]
+TYPE_HELP = f"タスクの種類（{' / '.join(TYPE_CHOICES)}）"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -40,11 +44,23 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("--description", default="")
     add.add_argument("--parent", type=int, default=None, help="親タスクの id")
     add.add_argument("--completed", action="store_true")
+    add.add_argument(
+        "--type",
+        choices=TYPE_CHOICES,
+        default=TodoType.TASK.value,
+        help=TYPE_HELP,
+    )
 
-    update = subparsers.add_parser("update", help="タスクの本文を更新する")
+    update = subparsers.add_parser("update", help="タスクの本文と種類を更新する")
     update.add_argument("todo_id", type=int)
     update.add_argument("--title", help="省略すると現在のタイトルを使う")
     update.add_argument("--description")
+    update.add_argument(
+        "--type",
+        choices=TYPE_CHOICES,
+        default=None,
+        help=f"{TYPE_HELP}。省略すると今の種類のまま",
+    )
     completion = update.add_mutually_exclusive_group()
     completion.add_argument("--completed", dest="completed", action="store_true", default=None)
     completion.add_argument("--not-completed", dest="completed", action="store_false")
@@ -100,6 +116,7 @@ def run_command(service: TodoService, args: argparse.Namespace) -> str:
                     description=args.description,
                     completed=args.completed,
                     parent_id=args.parent,
+                    type=TodoType(args.type),
                 )
             )
             return render_todo(created, as_json)
@@ -113,6 +130,7 @@ def run_command(service: TodoService, args: argparse.Namespace) -> str:
                         args.description if args.description is not None else current.description
                     ),
                     completed=args.completed if args.completed is not None else current.completed,
+                    type=TodoType(args.type) if args.type is not None else current.type,
                 ),
             )
             return render_todo(updated, as_json)
@@ -139,7 +157,10 @@ def format_todo(todo: Todo) -> str:
     checkbox = "[x]" if todo.completed else "[ ]"
     parent = f" parent=#{todo.parent_id}" if todo.parent_id is not None else " parent=root"
     description = f" — {todo.description}" if todo.description else ""
-    return f"{checkbox} #{todo.id} {todo.title}{description}{parent} position={todo.position}"
+    return (
+        f"{checkbox} #{todo.id} ({todo.type}) {todo.title}{description}"
+        f"{parent} position={todo.position}"
+    )
 
 
 def dump_json(payload: object) -> str:

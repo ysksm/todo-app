@@ -4,7 +4,7 @@ import { buildTodoTree } from '../../domain/entities/todo-tree'
 import { H_GAP, NODE_HEIGHT, NODE_WIDTH, V_GAP, layoutMindmap } from './use-mindmap-layout'
 
 function todo(id: number, parentId: number | null, position: number): Todo {
-  return { id, title: `todo-${id}`, description: '', completed: false, parentId, position }
+  return { id, title: `todo-${id}`, description: '', completed: false, type: 'task', parentId, position }
 }
 
 function layoutOf(todos: readonly Todo[], collapsedIds: number[] = []) {
