@@ -1,15 +1,10 @@
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
+"""ASGI のエントリポイント（`uvicorn main:app`）。
 
-from api.todos import router as todo_router
+インターフェースの中身は interfaces/ 配下にある。
+- HTTP API と MCP: interfaces/webapi/app.py
+- CLI: interfaces/cli/main.py（`uv run python -m interfaces.cli`）
+"""
 
-app = FastAPI(title="TODO API")
-app.include_router(todo_router)
-app.mount("/", StaticFiles(directory="./../web-frontend/dist", html=True), name="static")
+from interfaces.webapi.app import create_app
 
-def main():
-    print("Hello from web-backend!")
-
-
-if __name__ == "__main__":
-    main()
+app = create_app()

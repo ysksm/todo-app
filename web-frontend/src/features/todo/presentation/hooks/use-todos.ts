@@ -1,8 +1,14 @@
 import { useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import type { Todo, TodoUpdate } from '../../domain/entities/todo'
+import type { Todo, TodoDraft, TodoMove, TodoUpdate } from '../../domain/entities/todo'
 import type { TodoDependencies } from '../../di/todo-dependencies'
-import { selectSelectedTodo, selectTodoState, todoActions } from '../store/todo-slice'
+import { confirmCascadingDelete } from '../confirm-cascading-delete'
+import {
+  selectSelectedTodo,
+  selectTodoState,
+  todoActions,
+  type TodoViewMode,
+} from '../store/todo-slice'
 
 interface TodoState {
   todos: readonly Todo[]
@@ -10,18 +16,22 @@ interface TodoState {
   isSaving: boolean
   error: string | null
   selectedTodo: Todo | null
+  viewMode: TodoViewMode
   reload(): Promise<void>
   create(title: string): Promise<boolean>
+  createTodo(draft: TodoDraft): Promise<Todo | null>
   update(todo: TodoUpdate): Promise<boolean>
+  move(todo: TodoMove): Promise<boolean>
   remove(id: number): Promise<boolean>
   updateDraft(todo: Todo): void
   openDialog(id: number): void
   closeDialog(): void
+  changeViewMode(mode: TodoViewMode): void
 }
 
 export function useTodos(dependencies: TodoDependencies): TodoState {
   const dispatch = useDispatch()
-  const { todos, status, error } = useSelector(selectTodoState)
+  const { todos, status, error, viewMode } = useSelector(selectTodoState)
   const selectedTodo = useSelector(selectSelectedTodo)
 
   const reload = useCallback(async () => {
@@ -38,38 +48,68 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
     void reload()
   }, [reload])
 
+  /** 変更を保存して一覧を取り直す。失敗したら null を返す。 */
   const runMutation = useCallback(
-    async (operation: () => Promise<void>): Promise<boolean> => {
+    async <T,>(operation: () => Promise<T>): Promise<T | null> => {
       dispatch(todoActions.requestStarted('saving'))
       try {
-        await operation()
+        const result = await operation()
         const todos = await dependencies.listTodos.execute()
         dispatch(todoActions.requestSucceeded(todos))
-        return true
+        return result
       } catch {
         dispatch(todoActions.requestFailed('Todo の保存に失敗しました。'))
-        return false
+        return null
       }
     },
     [dependencies, dispatch],
   )
 
-  const create = useCallback(
-    (title: string) =>
-      runMutation(async () => {
-        await dependencies.createTodo.execute({ title, description: '', completed: false })
-      }),
+  const createTodo = useCallback(
+    (draft: TodoDraft) => runMutation(() => dependencies.createTodo.execute(draft)),
     [dependencies, runMutation],
+  )
+
+  const create = useCallback(
+    async (title: string) => {
+      const created = await createTodo({
+        title,
+        description: '',
+        completed: false,
+        parentId: null,
+      })
+      return created !== null
+    },
+    [createTodo],
   )
 
   const update = useCallback(
-    (todo: TodoUpdate) => runMutation(() => dependencies.updateTodo.execute(todo).then(() => undefined)),
+    async (todo: TodoUpdate) =>
+      (await runMutation(() => dependencies.updateTodo.execute(todo))) !== null,
     [dependencies, runMutation],
   )
 
-  const remove = useCallback(
-    (id: number) => runMutation(() => dependencies.deleteTodo.execute(id)),
+  const move = useCallback(
+    async (todo: TodoMove) =>
+      (await runMutation(() => dependencies.moveTodo.execute(todo))) !== null,
     [dependencies, runMutation],
+  )
+
+  // 削除は子孫まで波及するので、どのビューから呼ばれてもここで確認する。
+  const remove = useCallback(
+    async (id: number) => {
+      if (!confirmCascadingDelete(todos, id)) {
+        return false
+      }
+
+      return (
+        (await runMutation(async () => {
+          await dependencies.deleteTodo.execute(id)
+          return true
+        })) !== null
+      )
+    },
+    [dependencies, runMutation, todos],
   )
 
   const updateDraft = useCallback(
@@ -90,18 +130,29 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
     dispatch(todoActions.dialogClosed())
   }, [dispatch])
 
+  const changeViewMode = useCallback(
+    (mode: TodoViewMode) => {
+      dispatch(todoActions.viewModeChanged(mode))
+    },
+    [dispatch],
+  )
+
   return {
     todos,
     isLoading: status === 'loading',
     isSaving: status === 'saving',
     error,
     selectedTodo,
+    viewMode,
     reload,
     create,
+    createTodo,
     update,
+    move,
     remove,
     updateDraft,
     openDialog,
     closeDialog,
+    changeViewMode,
   }
 }

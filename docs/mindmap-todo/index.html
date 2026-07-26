@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TODO の親子関係とマインドマップビュー</title>
+    <style>
+      :root {
+        color: #17231d;
+        background: #f4f7f5;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main { width: min(100% - 32px, 920px); margin: 0 auto; padding: 48px 0 72px; }
+      h1, h2, h3 { color: #17231d; letter-spacing: 0; }
+      h1 { margin: 0 0 12px; font-size: 36px; line-height: 1.2; }
+      h2 { margin: 0 0 14px; font-size: 21px; }
+      h3 { margin: 26px 0 10px; font-size: 16px; color: #2f694c; }
+      p { margin: 0 0 14px; }
+      .lead { max-width: 680px; color: #52675a; font-size: 17px; }
+      section { margin-top: 34px; padding-top: 24px; border-top: 1px solid #c5d0c8; }
+      pre { overflow-x: auto; margin: 14px 0; padding: 16px; border-radius: 6px; background: #16231c; color: #e9f2eb; font: 13px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; }
+      code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .note { padding: 14px; border-left: 4px solid #397354; background: #e6efe9; color: #294836; }
+      .note p:last-child { margin-bottom: 0; }
+      ul, ol { margin: 0 0 14px; padding-left: 22px; }
+      li + li { margin-top: 7px; }
+
+      nav.toc { margin: 22px 0 0; padding: 14px 18px; border: 1px solid #aebfb4; border-radius: 6px; background: #fff; }
+      nav.toc ul { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; padding: 0; list-style: none; }
+      nav.toc li + li { margin-top: 0; }
+      nav.toc a { color: #2f694c; font-size: 14px; }
+
+      .table-wrap { overflow-x: auto; margin: 14px 0; }
+      table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
+      th, td { padding: 9px 12px; border: 1px solid #c5d0c8; text-align: left; vertical-align: top; }
+      th { background: #e6efe9; color: #294836; font-weight: 600; white-space: nowrap; }
+      td code, th code { font-size: 13px; }
+
+      kbd {
+        display: inline-block; min-width: 26px; padding: 2px 7px;
+        border: 1px solid #aebfb4; border-bottom-width: 2px; border-radius: 4px;
+        background: #fff; color: #17231d; font: 13px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
+        text-align: center;
+      }
+
+      .flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 18px 0; }
+      .step { min-height: 108px; padding: 14px; border: 1px solid #aebfb4; border-radius: 6px; background: #fff; }
+      .step strong { display: block; margin-bottom: 6px; color: #2f694c; font-size: 14px; }
+      .step span { display: block; color: #52675a; font-size: 14px; }
+
+      figure { margin: 18px 0; padding: 16px; border: 1px solid #aebfb4; border-radius: 6px; background: #fff; }
+      figure svg { display: block; width: 100%; height: auto; }
+      figcaption { margin-top: 10px; color: #52675a; font-size: 13px; }
+
+      .phase { margin-top: 22px; padding: 16px 18px; border: 1px solid #aebfb4; border-radius: 6px; background: #fff; }
+      .phase > h3 { margin-top: 0; }
+      .task { padding: 10px 0; border-top: 1px dashed #c5d0c8; }
+      .task:first-of-type { border-top: 0; padding-top: 4px; }
+      .task-id { display: inline-block; margin-right: 8px; padding: 1px 7px; border-radius: 3px; background: #e6efe9; color: #2f694c; font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .task-title { font-weight: 600; }
+      .task dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 6px 0 0; font-size: 14px; color: #52675a; }
+      .task dt { color: #2f694c; }
+      .task dd { margin: 0; }
+      .task dd code { font-size: 13px; }
+
+      .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; background: #397354; color: #fff; font-size: 12px; }
+      .badge--out { background: #8a9a90; }
+
+      @media (max-width: 720px) {
+        main { width: min(100% - 24px, 920px); padding-top: 28px; }
+        h1 { font-size: 28px; }
+        .flow { grid-template-columns: 1fr 1fr; }
+        .task dl { grid-template-columns: 1fr; }
+        .task dt { margin-top: 6px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>TODO の親子関係とマインドマップビュー</h1>
+        <p class="lead">
+          TODO に親子関係を持たせ、左から右へ枝が伸びるトーナメント表のようなマインドマップとして
+          表示・操作できるようにする。キーボードだけでタスクの追加・移動・命名ができることを目標にする。
+        </p>
+        <nav class="toc">
+          <ul>
+            <li><a href="#requirements">1. 要求</a></li>
+            <li><a href="#keys">2. キー操作</a></li>
+            <li><a href="#model">3. データモデル</a></li>
+            <li><a href="#api">4. API</a></li>
+            <li><a href="#frontend">5. フロントエンド設計</a></li>
+            <li><a href="#layout">6. レイアウト</a></li>
+            <li><a href="#tests">7. テスト</a></li>
+            <li><a href="#tasks">8. 実装タスク</a></li>
+          </ul>
+        </nav>
+      </header>
+
+      <!-- ============================================================ -->
+      <section id="requirements">
+        <h2>1. 要求</h2>
+        <p>
+          現状の TODO はフラットな 1 階層のリストしか持たない。思考を整理しながらタスクを分解できるよう、
+          <strong>タスクに親子関係を持たせ</strong>、それをマインドマップとして扱えるようにする。
+        </p>
+
+        <h3>やること</h3>
+        <ul>
+          <li><span class="badge">BE</span> TODO が親を 0 or 1 個持てるようにする（子は複数）。</li>
+          <li><span class="badge">BE</span> 同じ親の中での並び順を保持する。マインドマップの上下の並びを安定させるため。</li>
+          <li><span class="badge">BE</span> 親子関係を後から変更する API を用意し、循環参照を防ぐ。</li>
+          <li><span class="badge">FE</span> 既存の一覧画面は残したまま、マインドマップ表示を<strong>追加</strong>する。</li>
+          <li><span class="badge">FE</span> 左から右へ子が伸びるトーナメント表レイアウトにする。</li>
+          <li><span class="badge">FE</span> マインドマップ上のタスク操作をキーボードで完結させる。</li>
+        </ul>
+
+        <h3>やらないこと</h3>
+        <ul>
+          <li><span class="badge badge--out">除外</span> 複数ユーザー / 認証 / 同時編集</li>
+          <li><span class="badge badge--out">除外</span> マウスドラッグでのノード移動（キーボード操作を先に完成させる）</li>
+          <li><span class="badge badge--out">除外</span> 折りたたみ状態のサーバー永続化（クライアント内の一時状態にとどめる）</li>
+          <li><span class="badge badge--out">除外</span> キャンバスのパン・ズーム</li>
+          <li><span class="badge badge--out">除外</span> 期限・タグ・優先度などの新しい属性</li>
+        </ul>
+
+        <h3>用語</h3>
+        <ul>
+          <li><strong>ノード</strong> — マインドマップ上に描画された 1 つの TODO。</li>
+          <li><strong>ルート</strong> — 親を持たない TODO。複数存在してよい（森構造）。</li>
+          <li><strong>兄弟</strong> — 同じ親を持つ TODO の集合。並び順を持つ。</li>
+          <li><strong>子孫</strong> — ある TODO から親子リンクを辿って到達できるすべての TODO。</li>
+        </ul>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="keys">
+        <h2>2. キー操作</h2>
+        <p>
+          左→右レイアウトに合わせ、<strong>矢印キーの向きと画面上の移動方向を一致させる</strong>。
+          <kbd>←</kbd> <kbd>→</kbd> が階層の上下、<kbd>↑</kbd> <kbd>↓</kbd> が兄弟間の移動。
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>キー</th><th>通常モード</th><th>編集モード</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><kbd>→</kbd></td>
+                <td>折りたたみ中なら展開のみ。展開済みなら先頭の子へ。子が無ければ何もしない</td>
+                <td>input に委譲（カーソル移動）</td>
+              </tr>
+              <tr><td><kbd>←</kbd></td><td>親へ。ルートなら何もしない</td><td>input に委譲</td></tr>
+              <tr><td><kbd>↑</kbd></td><td>ひとつ上の兄弟へ。先頭なら何もしない</td><td>—</td></tr>
+              <tr><td><kbd>↓</kbd></td><td>ひとつ下の兄弟へ。末尾なら何もしない</td><td>—</td></tr>
+              <tr><td><kbd>F2</kbd></td><td>タイトル編集開始（既存タイトルを全選択）</td><td>—</td></tr>
+              <tr><td><kbd>Enter</kbd></td><td>同じ親に兄弟を新規追加し、そのノードを編集モードへ</td><td>保存して編集終了</td></tr>
+              <tr><td><kbd>Tab</kbd></td><td>子を新規追加し、編集モードへ（<code>preventDefault</code> 必須）</td><td>保存して編集終了</td></tr>
+              <tr><td><kbd>Delete</kbd> <kbd>BS</kbd></td><td>削除。子孫があるときは確認ダイアログ</td><td>—</td></tr>
+              <tr><td><kbd>Space</kbd></td><td><code>completed</code> をトグル</td><td>—</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>—</td><td>変更を破棄して編集終了</td></tr>
+              <tr><td><kbd>Home</kbd> <kbd>End</kbd></td><td>兄弟の先頭 / 末尾へ</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="note">
+          <p>
+            新規作成は空タイトルでは API を叩けない（<code>normalizeTodoDraft</code> が弾く）ため、
+            <strong>クライアント側に仮ノードを置いてから編集させ、確定時に <code>POST</code></strong> する。
+            空のまま <kbd>Esc</kbd> や blur した場合は仮ノードを破棄する。
+          </p>
+        </div>
+
+        <ul>
+          <li>移動キーは常に <code>preventDefault()</code>（ページスクロール抑止）。</li>
+          <li>端に到達した場合はフォーカスを動かさない。ラップアラウンドしない。</li>
+          <li>削除後のフォーカスは「直前の兄弟 → 無ければ親」の順で決める。</li>
+        </ul>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="model">
+        <h2>3. データモデル</h2>
+
+        <h3>バックエンド <code>models/todo.py</code></h3>
+<pre><code>class TodoBase(BaseModel):
+    title: str
+    description: str = ""
+    completed: bool = False
+
+
+class TodoCreate(TodoBase):
+    parent_id: int | None = None   # 追加先の親。None ならルート
+
+
+class TodoUpdate(TodoBase):
+    """PUT /api/todos/{id} 用。親子関係は変更しない。"""
+
+
+class TodoMove(BaseModel):
+    parent_id: int | None = None   # 移動先の親
+    position: int | None = None    # 兄弟内の挿入位置。None なら末尾
+
+
+class Todo(TodoBase):
+    id: int
+    parent_id: int | None = None
+    position: int = 0              # 同じ親を持つ兄弟の中での 0 始まりの並び順</code></pre>
+
+        <div class="note">
+          <p>
+            <strong>設計判断:</strong> 親子関係の変更を <code>PUT</code> に混ぜず、専用の
+            <code>PATCH .../move</code> に分離する。既存フロントの <code>PUT</code>
+            （title / description / completed のみ送信）が親子関係を壊さないようにするため。
+          </p>
+        </div>
+
+        <h3>永続化 <code>repositories/todo_repository.py</code></h3>
+        <p>JSONL の全読み・全書き戻しという現行方式は維持する。読み書きの両方で <code>_normalize()</code> を通す。</p>
+        <ol>
+          <li>存在しない <code>parent_id</code> を指す TODO は孤児とみなし <code>parent_id = None</code> に倒す。</li>
+          <li>親ごとにグループ化し、<code>(position, ファイル出現順)</code> でソートして <code>position</code> を 0..n-1 に振り直す。</li>
+          <li>万一循環が残っていた場合、循環に含まれるノードをルートへ戻す（データ破損時のフェイルセーフ）。</li>
+        </ol>
+        <p>
+          既存データには <code>parent_id</code> / <code>position</code> が無いが、Pydantic のデフォルト値で
+          読み込めるため<strong>マイグレーションスクリプトは不要</strong>。全件がルートとして扱われる。
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>メソッド</th><th>内容</th></tr></thead>
+            <tbody>
+              <tr><td><code>create(todo_create)</code></td><td><code>parent_id</code> を検証し、その親の末尾 <code>position</code> に追加</td></tr>
+              <tr><td><code>update(id, todo_update)</code></td><td>title / description / completed のみ更新。<code>parent_id</code> / <code>position</code> は保持</td></tr>
+              <tr><td><code>move(id, move)</code></td><td>親と位置を変更。循環チェックあり</td></tr>
+              <tr><td><code>delete(id)</code></td><td><strong>子孫ごとカスケード削除</strong>。削除した id のリストを返す</td></tr>
+              <tr><td><code>descendant_ids(id)</code></td><td>子孫 id の集合。循環チェックと削除で共用</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3><code>move</code> の手順</h3>
+        <ol>
+          <li>対象が存在しなければ <code>None</code> を返す（→ 404）。</li>
+          <li>移動先の親が自分自身、または自分の子孫なら <code>CyclicMoveError</code>（→ 400）。</li>
+          <li>移動先の親が None 以外で存在しなければ <code>ParentNotFoundError</code>（→ 400）。</li>
+          <li>旧兄弟から抜き、新兄弟の指定位置に挿入。<code>position=None</code> は末尾、範囲外は clamp。</li>
+          <li><code>_normalize()</code> して保存。</li>
+        </ol>
+
+        <h3>フロントエンド <code>domain/entities/todo.ts</code></h3>
+<pre><code>export interface Todo {
+  readonly id: number
+  readonly title: string
+  readonly description: string
+  readonly completed: boolean
+  readonly parentId: number | null
+  readonly position: number
+}
+
+export interface TodoDraft {
+  readonly title: string
+  readonly description: string
+  readonly completed: boolean
+  readonly parentId: number | null   // 追加
+}
+
+export interface TodoMove {
+  readonly id: number
+  readonly parentId: number | null
+  readonly position: number | null
+}</code></pre>
+        <p>
+          <code>TodoUpdate</code>（<code>id</code> + title / description / completed）は現状のまま。
+          <code>normalizeTodoDraft</code> は <code>parentId</code> をそのまま透過させる。
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="api">
+        <h2>4. API</h2>
+        <p>
+          <strong>フラットな配列を返す方式を維持し、木構造はフロント側で組み立てる。</strong>
+          サーバーとクライアントで木の構築ロジックを二重に持たないため。
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>メソッド</th><th>パス</th><th>リクエスト</th><th>レスポンス</th></tr></thead>
+            <tbody>
+              <tr><td><code>GET</code></td><td><code>/api/todos</code></td><td>—</td><td><code>Todo[]</code>（深さ優先・<code>position</code> 昇順）</td></tr>
+              <tr><td><code>GET</code></td><td><code>/api/todos/{id}</code></td><td>—</td><td><code>Todo</code></td></tr>
+              <tr><td><code>POST</code></td><td><code>/api/todos</code></td><td><code>TodoCreate</code></td><td><code>Todo</code></td></tr>
+              <tr><td><code>PUT</code></td><td><code>/api/todos/{id}</code></td><td><code>TodoUpdate</code></td><td><code>Todo</code></td></tr>
+              <tr><td><code>PATCH</code></td><td><code>/api/todos/{id}/move</code></td><td><code>TodoMove</code></td><td><code>Todo</code></td></tr>
+              <tr><td><code>DELETE</code></td><td><code>/api/todos/{id}</code></td><td>—</td><td><code>204</code>（子孫もカスケード削除）</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>状況</th><th>ステータス</th><th>detail</th></tr></thead>
+            <tbody>
+              <tr><td>対象 TODO が無い</td><td>404</td><td><code>Todo not found</code></td></tr>
+              <tr><td>指定した親が存在しない</td><td>400</td><td><code>Parent todo not found</code></td></tr>
+              <tr><td>自分自身 or 子孫を親に指定</td><td>400</td><td><code>Cannot move a todo under its own descendant</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="note">
+          <p><code>DELETE</code> が子孫までカスケードする点は破壊的なので、<code>web-backend/README.md</code> に明記する。</p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="frontend">
+        <h2>5. フロントエンド設計</h2>
+        <p>既存のレイヤ構成（domain / application / infrastructure / presentation）と DI の流儀は維持する。</p>
+
+<pre><code>src/features/todo/
+  domain/entities/
+    todo-tree.ts            # TodoNode 型と木構築・走査
+  domain/repositories/
+    todo-repository.ts      # move() を追加
+  application/use-cases/
+    move-todo.ts            # 追加
+  infrastructure/api/
+    todo-api-types.ts       # parent_id / position を追加
+  infrastructure/repositories/
+    http-todo-repository.ts # snake_case &lt;-&gt; camelCase 変換、move() 実装
+  presentation/
+    components/mindmap/
+      mindmap-view.tsx      # キャンバス、SVG コネクタ、キーイベント受け口
+      mindmap-node.tsx      # 1 ノードの描画 + インライン編集
+    hooks/
+      use-mindmap-navigation.ts   # キー入力 -&gt; 移動 / 編集 / 追加 / 削除
+      use-mindmap-layout.ts       # 木 -&gt; 座標
+    store/todo-slice.ts     # viewMode / focusedTodoId / editingTodoId を追加
+    mindmap.css</code></pre>
+
+        <h3>木構造 <code>domain/entities/todo-tree.ts</code></h3>
+        <p>純粋関数のみ。React にもストアにも依存させず、単体テストしやすくする。</p>
+<pre><code>export interface TodoNode {
+  readonly todo: Todo
+  readonly depth: number
+  readonly children: readonly TodoNode[]
+}
+
+export function buildTodoTree(todos: readonly Todo[]): readonly TodoNode[]
+export function flattenTree(roots: readonly TodoNode[]): readonly TodoNode[]
+export function findNode(roots: readonly TodoNode[], id: number): TodoNode | null
+export function findParent(roots: readonly TodoNode[], id: number): TodoNode | null
+export function findSibling(roots, id, offset: 1 | -1): TodoNode | null
+export function findFirstChild(roots, id): TodoNode | null</code></pre>
+        <ul>
+          <li>親が見つからない TODO はルート扱い（サーバー側の正規化と同じ方針）。</li>
+          <li>ルートは複数存在しうる。ルート同士も <code>position</code> 順の「兄弟」として扱い、<kbd>↑</kbd> <kbd>↓</kbd> で行き来できる。</li>
+        </ul>
+
+        <h3>状態管理 <code>presentation/store/todo-slice.ts</code></h3>
+<pre><code>viewMode: 'list' | 'mindmap'
+focusedTodoId: number | null    // マインドマップ上のカーソル位置
+editingTodoId: number | null    // F2 でインライン編集中のノード
+collapsedIds: number[]          // 折りたたみ（クライアント内のみ）</code></pre>
+        <p>
+          追加アクション: <code>viewModeChanged</code> / <code>focusMoved</code> / <code>editingStarted</code> /
+          <code>editingStopped</code> / <code>collapseToggled</code>。
+          <code>requestSucceeded</code> は既存の <code>selectedTodoId</code> と同様に、消えた TODO を指す
+          id を <code>null</code> に戻し、<code>collapsedIds</code> からも取り除く。
+        </p>
+
+        <h3>フォーカス方式</h3>
+        <p>
+          キーイベントはキャンバスのコンテナ（<code>tabIndex={0}</code>）で受け、<code>focusedTodoId</code> を動かす
+          <strong>roving focus</strong> 方式。個々のノードに DOM フォーカスを配らないことで、
+          数百ノードでもイベントハンドラが 1 つで済む。
+        </p>
+
+        <h3>アクセシビリティ</h3>
+        <ul>
+          <li>キャンバス: <code>role="tree"</code>, <code>aria-activedescendant</code></li>
+          <li>ノード: <code>role="treeitem"</code>, <code>aria-level</code>, <code>aria-expanded</code>（子がある場合のみ）, <code>aria-selected</code></li>
+          <li>キー割り当ての凡例をビュー内に表示する（<kbd>?</kbd> でトグル）。</li>
+        </ul>
+
+        <h3>ビュー切り替え</h3>
+        <p>
+          ヘッダーに「リスト / マインドマップ」のタブを置き、<code>viewMode</code> で切り替える。
+          どちらのビューも同じ <code>useTodos</code> のデータを参照するため、片方の変更が即もう片方に反映される。
+          既存のリストビューは、親子関係をインデントで示す最小変更にとどめる。
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="layout">
+        <h2>6. レイアウト</h2>
+        <p>左→右のトーナメント表。tidy tree の簡易版（Reingold–Tilford の 1 次元版）。</p>
+
+<pre><code>NODE_WIDTH = 220, NODE_HEIGHT = 44
+H_GAP = 64   // 列間の水平距離
+V_GAP = 12   // 葉の垂直間隔</code></pre>
+
+        <ul>
+          <li><code>x = depth * (NODE_WIDTH + H_GAP)</code></li>
+          <li><code>y</code> は深さ優先で走査し、<strong>葉に出会うたびに次のスロットを消費</strong>する（<code>nextY += NODE_HEIGHT + V_GAP</code>）。</li>
+          <li>子を持つノードの <code>y</code> は<strong>先頭の子と末尾の子の中点</strong>。これでトーナメント表状に揃う。</li>
+          <li>出力は <code>Map&lt;todoId, {x, y}&gt;</code> とキャンバス全体の <code>{width, height}</code>。</li>
+          <li>折りたたまれたノードの子はレイアウト計算から除外する（<code>collapsedIds: Set&lt;number&gt;</code> を入力に取る）。</li>
+        </ul>
+
+        <figure>
+          <svg viewBox="0 0 720 260" role="img" aria-label="左から右へ子が伸びるトーナメント表状のレイアウト図">
+            <g fill="none" stroke="#397354" stroke-width="1.5">
+              <path d="M186,130 C216,130 216,60 246,60" />
+              <path d="M186,130 C216,130 216,200 246,200" />
+              <path d="M426,60 C456,60 456,30 486,30" />
+              <path d="M426,60 C456,60 456,90 486,90" />
+              <path d="M426,200 C456,200 456,200 486,200" />
+            </g>
+            <g font-family="system-ui, sans-serif" font-size="13">
+              <g>
+                <rect x="26" y="112" width="160" height="36" rx="6" fill="#2f694c" />
+                <text x="42" y="135" fill="#ffffff">アプリを作る</text>
+              </g>
+              <g>
+                <rect x="246" y="42" width="180" height="36" rx="6" fill="#ffffff" stroke="#aebfb4" />
+                <text x="262" y="65" fill="#17231d">バックエンド</text>
+              </g>
+              <g>
+                <rect x="246" y="182" width="180" height="36" rx="6" fill="#ffffff" stroke="#aebfb4" />
+                <text x="262" y="205" fill="#17231d">フロントエンド</text>
+              </g>
+              <g>
+                <rect x="486" y="12" width="200" height="36" rx="6" fill="#ffffff" stroke="#aebfb4" />
+                <text x="502" y="35" fill="#17231d">モデルに parent_id</text>
+              </g>
+              <g>
+                <rect x="486" y="72" width="200" height="36" rx="6" fill="#ffffff" stroke="#aebfb4" />
+                <text x="502" y="95" fill="#17231d">move API</text>
+              </g>
+              <g>
+                <rect x="486" y="182" width="200" height="36" rx="6" fill="#ffffff" stroke="#aebfb4" />
+                <text x="502" y="205" fill="#17231d">マインドマップ描画</text>
+              </g>
+            </g>
+            <g stroke="#8a9a90" stroke-width="1" stroke-dasharray="3 3">
+              <line x1="106" y1="240" x2="106" y2="252" />
+              <line x1="336" y1="240" x2="336" y2="252" />
+              <line x1="586" y1="240" x2="586" y2="252" />
+            </g>
+            <g font-family="ui-monospace, monospace" font-size="11" fill="#52675a" text-anchor="middle">
+              <text x="106" y="252">depth 0</text>
+              <text x="336" y="252">depth 1</text>
+              <text x="586" y="252">depth 2</text>
+            </g>
+          </svg>
+          <figcaption>
+            深さが列（x）に、兄弟が行（y）に対応する。親は子の中点に置かれるため、右へ行くほど枝が広がる。
+          </figcaption>
+        </figure>
+
+        <p>ノード間の接続線は SVG の <code>&lt;path&gt;</code> で、親の右端 → 子の左端を結ぶ 3 次ベジエ:</p>
+<pre><code>M px,py C px+H_GAP/2,py  cx-H_GAP/2,cy  cx,cy</code></pre>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="tests">
+        <h2>7. テスト</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>対象</th><th>種類</th><th>内容</th></tr></thead>
+            <tbody>
+              <tr><td><code>TodoRepository</code></td><td>pytest</td><td><code>create</code> の position 採番 / <code>move</code> の並び替え / 循環拒否 / カスケード削除 / 旧フォーマット JSONL の読み込み</td></tr>
+              <tr><td>API</td><td>pytest + <code>TestClient</code></td><td>各エンドポイントのステータスコードとエラー detail</td></tr>
+              <tr><td><code>todo-tree.ts</code></td><td>vitest</td><td>木構築（孤児・複数ルート）、<code>findSibling</code> / <code>findFirstChild</code> の境界</td></tr>
+              <tr><td><code>use-mindmap-layout.ts</code></td><td>vitest</td><td>単一ノード / 深いネスト / 折りたたみ時の座標</td></tr>
+              <tr><td><code>mindmap-view.tsx</code></td><td>vitest + Testing Library</td><td>各キーでフォーカスが期待どおり動くこと、<kbd>F2</kbd> で input が出ること</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>バックエンドには現状テストが無いため、<code>pytest</code> の導入もタスクに含める。</p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="tasks">
+        <h2>8. 実装タスク</h2>
+
+        <div class="flow">
+          <div class="step"><strong>1. BE モデル</strong><span>親子関係と並び順をデータに持たせる</span></div>
+          <div class="step"><strong>2. BE API</strong><span>move / カスケード削除とテスト</span></div>
+          <div class="step"><strong>3. FE 基盤</strong><span>型・木構築・move の配線</span></div>
+          <div class="step"><strong>4. 描画</strong><span>トーナメント表とビュー切り替え</span></div>
+          <div class="step"><strong>5. キー操作</strong><span>移動・編集・追加・削除</span></div>
+        </div>
+        <p>各段階でアプリが壊れずに動く状態を保つ。バックエンドを先に入れても、既存フロントは <code>parent_id</code> を無視するだけで従来どおり動作する。</p>
+
+        <div class="phase">
+          <h3>フェーズ 1 — バックエンド: データモデル</h3>
+
+          <div class="task">
+            <p><span class="task-id">BE-1</span><span class="task-title">Todo モデルに親子関係と並び順を追加</span></p>
+            <dl>
+              <dt>対象</dt><dd><code>web-backend/models/todo.py</code></dd>
+              <dt>内容</dt><dd><code>TodoBase</code> / <code>TodoCreate</code>(<code>parent_id</code>) / <code>TodoUpdate</code> / <code>TodoMove</code> / <code>Todo</code>(<code>parent_id</code>, <code>position</code>) に分割する</dd>
+              <dt>完了条件</dt><dd>既存の import が壊れず、<code>TodoUpdate</code> / <code>TodoMove</code> が追加されている</dd>
+            </dl>
+          </div>
+
+          <div class="task">
+            <p><span class="task-id">BE-2</span><span class="task-title">リポジトリの正規化と親子対応</span></p>
+            <dl>
+              <dt>前提</dt><dd>BE-1</dd>
+              <dt>対象</dt><dd><code>web-backend/repositories/todo_repository.py</code></dd>
+              <dt>内容</dt><dd><code>_normalize()</code> を実装し読み書き両方で通す。<code>create</code> を「指定親の末尾に追加」に変更。<code>update</code> が <code>parent_id</code> / <code>position</code> を保持することを保証</dd>
+              <dt>完了条件</dt><dd><code>parent_id</code> を持たない既存の <code>data/todos.jsonl</code> を読み込んでも例外が出ず、全件がルートとして返る</dd>
+            </dl>
+          </div>
+
+          <div class="task">
+            <p><span class="task-id">BE-3</span><span class="task-title">move / カスケード削除の実装</span></p>
+            <dl>
+              <dt>前提</dt><dd>BE-2</dd>
+              <dt>対象</dt><dd><code>repositories/todo_repository.py</code>, <code>repositories/errors.py</code>（新規）</dd>
+              <dt>内容</dt><dd><code>descendant_ids()</code>, <code>move()</code>, カスケードする <code>delete()</code>。循環時は <code>CyclicMoveError</code>、親不在は <code>ParentNotFoundError</code></dd>
+              <dt>完了条件</dt><dd>自分の子孫を親に指定すると例外、親を削除すると子孫も JSONL から消える</dd>
+            </dl>
+          </div>
+        </div>
+
+        <div class="phase">
+          <h3>フェーズ 2 — バックエンド: API</h3>
+
+          <div class="task">
+            <p><span class="task-id">BE-4</span><span class="task-title">エンドポイントの追加・調整</span></p>
+            <dl>
+              <dt>前提</dt><dd>BE-3</dd>
+              <dt>対象</dt><dd><code>web-backend/api/todos.py</code></dd>
+              <dt>内容</dt><dd><code>GET</code> を深さ優先・<code>position</code> 昇順に。<code>POST</code> を <code>parent_id</code> 対応。<code>PUT</code> を <code>TodoUpdate</code> に。<code>PATCH /{id}/move</code> を追加。例外 → 404 / 400 の変換</dd>
+              <dt>完了条件</dt><dd>「4. API」の表とエラー表のとおりに応答する</dd>
+            </dl>
+          </div>
+
+          <div class="task">
+            <p><span class="task-id">BE-5</span><span class="task-title">バックエンドのテスト整備</span></p>
+            <dl>
+              <dt>前提</dt><dd>BE-4</dd>
+              <dt>対象</dt><dd><code>web-backend/pyproject.toml</code>（<code>pytest</code>, <code>httpx</code> を dev 依存に）, <code>web-backend/tests/</code></dd>
+              <dt>内容</dt><dd><code>test_todo_repository.py</code> と <code>test_todos_api.py</code>。リポジトリは一時ディレクトリの JSONL を使う</dd>
+              <dt>注意</dt><dd><code>api/todos.py</code> はモジュールレベルで <code>repository</code> を生成しているため、テスト用に差し替えられるよう <code>Depends</code> 化を検討する</dd>
+              <dt>完了条件</dt><dd><code>uv run pytest</code> が通る</dd>
+            </dl>
+          </div>
+        </div>
+
+        <div class="phase">
+          <h3>フェーズ 3 — フロントエンド: ドメイン / インフラ層</h3>
+
+          <div class="task">
+            <p><span class="task-id">FE-1</span><span class="task-title">Todo 型に parentId / position を追加</span></p>
+            <dl>
+              <dt>前提</dt><dd>BE-4</dd>
+              <dt>対象</dt><dd><code>domain/entities/todo.ts</code>, <code>infrastructure/api/todo-api-types.ts</code>, <code>infrastructure/repositories/http-todo-repository.ts</code></dd>
+              <dt>内容</dt><dd><code>TodoResponse</code> に <code>parent_id</code> / <code>position</code>、<code>toTodo</code> で camelCase へ変換。<code>TodoDraft</code> に <code>parentId</code></dd>
+              <dt>完了条件</dt><dd><code>npm run build</code> が通り、既存画面の挙動が変わらない</dd>
+            </dl>
+          </div>
+
+          <div class="task">
+            <p><span class="task-id">FE-2</span><span class="task-title">木構造ユーティリティ</span></p>
+            <dl>
+              <dt>前提</dt><dd>FE-1</dd>
+              <dt>対象</dt><dd><code>domain/entities/todo-tree.ts</code> + <code>todo-tree.test.ts</code></dd>
+              <dt>内容</dt><dd><code>buildTodoTree</code> / <code>flattenTree</code> / <code>findNode</code> / <code>findParent</code> / <code>findSibling</code> / <code>findFirstChild</code>。ルートは複数可、孤児はルート扱い</dd>
+              <dt>完了条件</dt><dd>vitest でツリー構築と走査の境界ケースが通る</dd>
+            </dl>
+          </div>
+
+          <div class="task">
+            <p><span class="task-id">FE-3</span><span class="task-title">move ユースケースの配線</span></p>
+            <dl>
+              <dt>前提</dt><dd>FE-1</dd>
+              <dt>対象</dt><dd><code>domain/repositories/todo-repository.ts</code>, <code>http-todo-repository.ts</code>, <code>application/use-cases/move-todo.ts</code>, <code>di/*</code></dd>
+              <dt>内容</dt><dd><code>move(todo: TodoMove): Promise&lt;Todo&gt;</code> を追加し <code>PATCH /api/todos/{id}/move</code> を呼ぶ</dd>
+              <dt>完了条件</dt><dd>DI 経由で <code>moveTodo.execute(...)</code> が呼べる</dd>
+            </dl>
+          </div>
+        </div>
+
+        <div class="phase">
+          <h3>フェーズ 4 — フロントエンド: マインドマップ描画</h3>
+
+          <div class="task">
+            <p><span class="task-id">FE-4</span><span class="task-title">ストアの拡張</span></p>
+            <dl>
+              <dt>前提</dt><dd>FE-2</dd>
+              <dt>対象</dt><dd><code>presentation/store/todo-slice.ts</code> + <code>todo-slice.test.ts</code></dd>
+              <dt>内容</dt><dd><code>viewMode</code> / <code>focusedTodoId</code> / <code>editingTodoId</code> / <code>collapsedIds</code> と対応アクション。<code>requestSucceeded</code> で消えた id を掃除</dd>
+              <dt>完了条件</dt><dd>既存の slice テストが通り、新しい状態遷移のテストが追加されている</dd>
+            </dl>
+          </div>
+
+          <div class="task">
+            <p><span class="task-id">FE-5</span><span class="task-title">レイアウト計算</span></p>
+            <dl>
+              <dt>前提</dt><dd>FE-2</dd>
+              <dt>対象</dt><dd><code>presentation/hooks/use-mindmap-layout.ts</code> + テスト</dd>
+              <dt>内容</dt><dd>左→右のトーナメント表配置（葉でスロット消費、親は子の中点）。折りたたみを考慮。出力は座標 Map とキャンバスサイズ</dd>
+              <dt>完了条件</dt><dd>単一ノード / 深いネスト / 折りたたみ時の座標がテストで固定されている</dd>
+            </dl>
+          </div>
+
+          <div class="task">
+            <p><span class="task-id">FE-6</span><span class="task-title">マインドマップの描画</span></p>
+            <dl>
+              <dt>前提</dt><dd>FE-4, FE-5</dd>
+              <dt>対象</dt><dd><code>components/mindmap/mindmap-view.tsx</code>, <code>mindmap-node.tsx</code>, <code>presentation/mindmap.css</code></dd>
+              <dt>内容</dt><dd>絶対配置のノード + SVG のベジエ接続線。title / 完了状態 / 子の数と折りたたみトグル。<code>role="tree"</code> と <code>aria-*</code></dd>
+              <dt>完了条件</dt><dd>親子を持つデータが左→右のトーナメント表として描画される（キー操作はまだ無くてよい）</dd>
+            </dl>
+          </div>
+
+          <div class="task">
+            <p><span class="task-id">FE-7</span><span class="task-title">ビュー切り替え</span></p>
+            <dl>
+              <dt>前提</dt><dd>FE-6</dd>
+              <dt>対象</dt><dd><code>presentation/pages/todo-page.tsx</code>, <code>presentation/hooks/use-todos.ts</code></dd>
+              <dt>内容</dt><dd>ヘッダーに「リスト / マインドマップ」タブ。<code>useTodos</code> に <code>move</code> と木構造の導出を追加</dd>
+              <dt>完了条件</dt><dd>タブでビューが切り替わり、どちらのビューでも同じデータが見える</dd>
+            </dl>
+          </div>
+        </div>
+
+        <div class="phase">
+          <h3>フェーズ 5 — キーボード操作</h3>
+
+          <div class="task">
+            <p><span class="task-id">FE-8</span><span class="task-title">フォーカス移動</span></p>
+            <dl>
+              <dt>前提</dt><dd>FE-7</dd>
+              <dt>対象</dt><dd><code>presentation/hooks/use-mindmap-navigation.ts</code></dd>
+              <dt>内容</dt><dd><kbd>→</kbd> 子へ（折りたたみ中は展開のみ）/ <kbd>←</kbd> 親へ / <kbd>↑</kbd> <kbd>↓</kbd> 兄弟 / <kbd>Home</kbd> <kbd>End</kbd> 兄弟の端。端でラップしない。roving focus</dd>
+              <dt>完了条件</dt><dd>Testing Library で各キーの <code>focusedTodoId</code> 遷移が検証されている</dd>
+            </dl>
+          </div>
+
+          <div class="task">
+            <p><span class="task-id">FE-9</span><span class="task-title">F2 によるインライン編集</span></p>
+            <dl>
+              <dt>前提</dt><dd>FE-8</dd>
+              <dt>対象</dt><dd><code>mindmap-node.tsx</code>, <code>use-mindmap-navigation.ts</code></dd>
+              <dt>内容</dt><dd><kbd>F2</kbd> で input に切り替え全選択。<kbd>Enter</kbd> で保存、<kbd>Esc</kbd> で破棄、blur でも保存。保存中は入力を無効化し、失敗時は編集状態を維持</dd>
+              <dt>完了条件</dt><dd><kbd>F2</kbd> → 入力 → <kbd>Enter</kbd> でタイトルが更新される</dd>
+            </dl>
+          </div>
+
+          <div class="task">
+            <p><span class="task-id">FE-10</span><span class="task-title">Enter / Tab による追加と Delete による削除</span></p>
+            <dl>
+              <dt>前提</dt><dd>FE-9</dd>
+              <dt>対象</dt><dd><code>use-mindmap-navigation.ts</code>, <code>mindmap-view.tsx</code></dd>
+              <dt>内容</dt><dd><kbd>Enter</kbd> は兄弟、<kbd>Tab</kbd> は子として仮ノードを作り編集モードへ。確定時に <code>POST</code> → <code>PATCH move</code> で位置を合わせる。空タイトルなら破棄。<kbd>Delete</kbd> は子孫があるとき確認ダイアログ。<kbd>Space</kbd> で完了トグル</dd>
+              <dt>完了条件</dt><dd>キーボードだけで「追加 → 命名 → 子を追加 → 削除」が一通りできる</dd>
+            </dl>
+          </div>
+        </div>
+
+        <div class="phase">
+          <h3>フェーズ 6 — 仕上げ</h3>
+
+          <div class="task">
+            <p><span class="task-id">FE-11</span><span class="task-title">リストビューの階層表示</span></p>
+            <dl>
+              <dt>前提</dt><dd>FE-2</dd>
+              <dt>対象</dt><dd><code>components/todo-list.tsx</code>, <code>todo-list-item.tsx</code></dd>
+              <dt>内容</dt><dd>深さ優先順に並べ、<code>depth</code> に応じたインデントを付ける</dd>
+              <dt>完了条件</dt><dd>親子関係がリストビューでも判別できる</dd>
+            </dl>
+          </div>
+
+          <div class="task">
+            <p><span class="task-id">FE-12</span><span class="task-title">キーボードヘルプ</span></p>
+            <dl>
+              <dt>前提</dt><dd>FE-10</dd>
+              <dt>対象</dt><dd><code>mindmap-view.tsx</code></dd>
+              <dt>内容</dt><dd>凡例パネル（<kbd>?</kbd> でトグル）にキー割り当て一覧を表示</dd>
+              <dt>完了条件</dt><dd>マインドマップ上で操作方法が確認できる</dd>
+            </dl>
+          </div>
+
+          <div class="task">
+            <p><span class="task-id">DOC-1</span><span class="task-title">ドキュメント更新</span></p>
+            <dl>
+              <dt>前提</dt><dd>BE-5, FE-10</dd>
+              <dt>対象</dt><dd><code>README.md</code>, <code>web-backend/README.md</code></dd>
+              <dt>内容</dt><dd>API 一覧（<code>PATCH move</code> の追加、<code>DELETE</code> のカスケード）とキー操作を記載</dd>
+              <dt>完了条件</dt><dd>README だけ読めば API とキー操作が分かる</dd>
+            </dl>
+          </div>
+        </div>
+
+        <h3>実行順の目安</h3>
+<pre><code>BE-1 → BE-2 → BE-3 → BE-4 → BE-5
+                        └→ FE-1 → FE-2 → FE-4 ┐
+                                  └→ FE-3     ├→ FE-6 → FE-7 → FE-8 → FE-9 → FE-10 → FE-12
+                                  └→ FE-5 ────┘                                  └→ DOC-1
+                                  └→ FE-11</code></pre>
+      </section>
+    </main>
+  </body>
+</html>

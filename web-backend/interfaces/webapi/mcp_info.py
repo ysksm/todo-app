@@ -1,0 +1,91 @@
+from __future__ import annotations
+
+import ipaddress
+import json
+
+from fastapi import APIRouter, Request
+from pydantic import BaseModel
+
+from interfaces.mcp.config import McpSettings
+
+KEY_PLACEHOLDER = "$MCP_API_KEY"
+
+
+class McpConnection(BaseModel):
+    server_name: str
+    url: str
+    header_name: str
+    """認証キーを載せるヘッダー名。"""
+    api_key: str | None
+    """ローカルからの参照時のみ実際のキー。それ以外は None。"""
+    is_local_request: bool
+    add_command: str
+    """Claude Code に登録するコマンド。"""
+    client_config: str
+    """他の MCP クライアント向けの設定 JSON。"""
+    note: str | None
+
+
+def create_mcp_info_router(settings: McpSettings) -> APIRouter:
+    router = APIRouter(prefix="/api/mcp", tags=["mcp"])
+
+    @router.get("/connection", response_model=McpConnection)
+    def get_connection(request: Request) -> McpConnection:
+        """MCP クライアントを登録するための接続情報を返す。
+
+        認証キーはローカルからの要求にだけ返す。このエンドポイント自体は
+        認証していないので、外部に開いた状態でキーを配らないようにするため。
+        """
+        is_local = is_loopback_client(request)
+        url = f"{str(request.base_url).rstrip('/')}{settings.mount_path}"
+        key = settings.api_key if is_local else KEY_PLACEHOLDER
+
+        return McpConnection(
+            server_name=settings.server_name,
+            url=url,
+            header_name="Authorization",
+            api_key=settings.api_key if is_local else None,
+            is_local_request=is_local,
+            add_command=build_add_command(settings.server_name, url, key),
+            client_config=build_client_config(settings.server_name, url, key),
+            note=None
+            if is_local
+            else "認証キーはローカルからの参照時のみ表示されます。"
+            "サーバー上の data/mcp_api_key を確認してください。",
+        )
+
+    return router
+
+
+def build_add_command(server_name: str, url: str, api_key: str) -> str:
+    return (
+        f"claude mcp add --transport http {server_name} {url} "
+        f'--header "Authorization: Bearer {api_key}"'
+    )
+
+
+def build_client_config(server_name: str, url: str, api_key: str) -> str:
+    return json.dumps(
+        {
+            "mcpServers": {
+                server_name: {
+                    "type": "http",
+                    "url": url,
+                    "headers": {"Authorization": f"Bearer {api_key}"},
+                }
+            }
+        },
+        indent=2,
+        ensure_ascii=False,
+    )
+
+
+def is_loopback_client(request: Request) -> bool:
+    host = request.client.host if request.client else None
+    if not host:
+        return False
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        # TestClient などホスト名で来る場合がある。
+        return host == "localhost" or host == "testclient"

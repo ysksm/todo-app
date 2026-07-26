@@ -1,5 +1,5 @@
 import {
-  normalizeTodoDraft,
+  normalizeTodoContent,
   type Todo,
   type TodoDraft,
 } from '../../domain/entities/todo'
@@ -13,6 +13,6 @@ export class CreateTodo {
   }
 
   async execute(draft: TodoDraft): Promise<Todo> {
-    return this.repository.create(normalizeTodoDraft(draft))
+    return this.repository.create(normalizeTodoContent(draft))
   }
 }

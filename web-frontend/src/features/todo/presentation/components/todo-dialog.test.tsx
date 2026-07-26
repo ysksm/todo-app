@@ -10,7 +10,7 @@ describe('TodoDialog', () => {
 
     render(
       <TodoDialog
-        todo={{ id: 1, title: 'Buy milk', description: '2L', completed: false }}
+        todo={{ id: 1, title: 'Buy milk', description: '2L', completed: false, parentId: null, position: 0 }}
         isSaving={false}
         onDraftChange={onDraftChange}
         onUpdate={vi.fn().mockResolvedValue(true)}
@@ -29,6 +29,8 @@ describe('TodoDialog', () => {
       title: 'Buy oat milk',
       description: '2L',
       completed: false,
+      parentId: null,
+      position: 0,
     })
   })
 })
