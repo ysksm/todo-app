@@ -1,0 +1,23 @@
+{
+  "name": "web-backend-ts",
+  "version": "0.1.0",
+  "description": "TODO API (TypeScript version of web-backend, compiled to native via scriptc)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run embed && scriptc run src/main.ts",
+    "embed": "node scripts/embed-assets.mjs",
+    "build": "npm run embed && scriptc build src/main.ts --backend c --keep-c -o bin/todo-api",
+    "build:llvm": "npm run embed && scriptc build src/main.ts -o bin/todo-api",
+    "coverage": "scriptc coverage src/main.ts",
+    "start": "./bin/todo-api",
+    "test": "./test/smoke.sh",
+    "typecheck": "npm run embed && tsc --noEmit"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "scriptc": "^0.0.17",
+    "typescript": "^7.0.2"
+  }
+}

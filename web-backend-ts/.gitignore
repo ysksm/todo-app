@@ -1,0 +1,6 @@
+node_modules/
+bin/
+.scriptc/
+
+# npm run embed で生成される（../web-frontend/dist から再生成できる）
+src/assets.generated.ts
