@@ -82,6 +82,56 @@ def test_update_and_move_through_tools(mcp_server) -> None:
     assert moved["position"] == 0
 
 
+def test_create_with_a_status_through_tools(mcp_server) -> None:
+    created = call_tool(mcp_server, "create_todo", title="作業中", status="doing")
+
+    assert created["status"] == "doing"
+    # 省略時は todo
+    assert call_tool(mcp_server, "create_todo", title="手つかず")["status"] == "todo"
+
+
+def test_update_changes_and_keeps_the_status(mcp_server) -> None:
+    created = call_tool(mcp_server, "create_todo", title="タスク")
+
+    updated = call_tool(
+        mcp_server, "update_todo", todo_id=created["id"], title="タスク", status="done"
+    )
+    assert updated["status"] == "done"
+
+    # status を省略した更新は今の状態を保つ
+    renamed = call_tool(mcp_server, "update_todo", todo_id=created["id"], title="改名")
+    assert renamed["status"] == "done"
+
+
+def test_list_todos_filters_by_status_through_tools(mcp_server) -> None:
+    call_tool(mcp_server, "create_todo", title="手つかず")
+    doing = call_tool(mcp_server, "create_todo", title="作業中", status="doing")
+
+    filtered = call_tool(mcp_server, "list_todos", status="doing")
+
+    assert [todo["id"] for todo in filtered] == [doing["id"]]
+    assert len(call_tool(mcp_server, "list_todos")) == 2
+
+
+def test_render_tree_shows_status_marks(mcp_server) -> None:
+    call_tool(mcp_server, "create_todo", title="todo のまま")
+    call_tool(mcp_server, "create_todo", title="作業中", status="doing")
+    call_tool(mcp_server, "create_todo", title="完了", status="done")
+
+    assert call_tool(mcp_server, "render_todo_tree") == "\n".join(
+        [
+            "[ ] #1 (task) todo のまま",
+            "[~] #2 (task) 作業中",
+            "[x] #3 (task) 完了",
+        ]
+    )
+
+
+def test_create_rejects_an_unknown_status(mcp_server) -> None:
+    with pytest.raises(Exception):
+        call_tool(mcp_server, "create_todo", title="x", status="unknown")
+
+
 def test_delete_through_tools_reports_descendants(mcp_server) -> None:
     root = call_tool(mcp_server, "create_todo", title="root", type="product")
     child = call_tool(mcp_server, "create_todo", title="child", parent_id=root["id"], type="epic")
