@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from core.models.todo import Todo, TodoCreate, TodoMove, TodoUpdate
+from core.models.todo_status import TodoStatus
 from core.models.todo_type import TodoType, default_child_type
 from core.errors import CyclicMoveError, InvalidHierarchyError, ParentNotFoundError
 from core.repositories.todo_repository import TodoRepository
@@ -70,12 +71,12 @@ def test_update_keeps_parent_and_position(repository: TodoRepository) -> None:
 
     updated = repository.update(
         second_child.id,
-        TodoUpdate(title="renamed", description="detail", completed=True, type=TodoType.EPIC),
+        TodoUpdate(title="renamed", description="detail", status=TodoStatus.DOING, type=TodoType.EPIC),
     )
 
     assert updated is not None
     assert updated.title == "renamed"
-    assert updated.completed is True
+    assert updated.status is TodoStatus.DOING
     assert updated.type is TodoType.EPIC
     assert updated.parent_id == root.id
     assert updated.position == 1
@@ -216,6 +217,8 @@ def test_reads_legacy_rows_without_parent_id(tmp_path: Path) -> None:
     assert [todo.position for todo in todos] == [0, 1]
     # type を持たない行は task 扱い。読み込みでは種類の妥当性を問わない。
     assert [todo.type for todo in todos] == [TodoType.TASK, TodoType.TASK]
+    # status を持たない行は completed から読む。false は todo、true は done。
+    assert [todo.status for todo in todos] == [TodoStatus.TODO, TodoStatus.DONE]
 
 
 def test_reads_rows_whose_types_break_the_hierarchy(tmp_path: Path) -> None:

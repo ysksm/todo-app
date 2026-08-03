@@ -40,6 +40,45 @@ def test_create_defaults_to_root(client: TestClient) -> None:
     assert response.json()["position"] == 0
     # 種類も省略できる。既定は task。
     assert response.json()["type"] == "task"
+    # 状態も省略できる。既定は todo。
+    assert response.json()["status"] == "todo"
+
+
+def test_list_filters_by_status(client: TestClient) -> None:
+    todo = post_todo(client, "手つかず")
+    doing = post_todo(client, "作業中")
+    client.put(
+        f"/api/todos/{doing['id']}",
+        json={"title": "作業中", "status": "doing", "type": "product"},
+    )
+
+    response = client.get("/api/todos", params={"status": "doing"})
+
+    assert response.status_code == 200
+    assert [t["id"] for t in response.json()] == [doing["id"]]
+    assert [t["id"] for t in client.get("/api/todos", params={"status": "todo"}).json()] == [
+        todo["id"]
+    ]
+    assert client.get("/api/todos", params={"status": "done"}).json() == []
+
+
+def test_list_with_unknown_status_returns_422(client: TestClient) -> None:
+    response = client.get("/api/todos", params={"status": "unknown"})
+
+    assert response.status_code == 422
+
+
+def test_put_accepts_legacy_completed(client: TestClient) -> None:
+    """status 導入前のクライアントが送る completed も受け付ける。"""
+    todo = post_todo(client, "旧クライアント")
+
+    response = client.put(
+        f"/api/todos/{todo['id']}",
+        json={"title": "旧クライアント", "completed": True, "type": "product"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "done"
 
 
 def test_create_with_a_type_the_parent_cannot_hold_returns_400(client: TestClient) -> None:
@@ -107,7 +146,7 @@ def test_put_keeps_parent_and_position(client: TestClient) -> None:
 
     response = client.put(
         f"/api/todos/{child['id']}",
-        json={"title": "renamed", "description": "detail", "completed": True, "type": "epic"},
+        json={"title": "renamed", "description": "detail", "status": "done", "type": "epic"},
     )
 
     assert response.status_code == 200

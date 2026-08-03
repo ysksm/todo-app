@@ -58,7 +58,7 @@ def test_json_output(run_cli) -> None:
         "id": 1,
         "title": "root",
         "description": "",
-        "completed": False,
+        "status": "todo",
         "type": "task",
         "parent_id": None,
         "position": 0,
@@ -68,15 +68,27 @@ def test_json_output(run_cli) -> None:
 def test_update_keeps_unspecified_fields(run_cli) -> None:
     run_cli("add", "root", "--description", "元の詳細")
 
-    _, out, _ = run_cli("--json", "update", "1", "--completed")
+    _, out, _ = run_cli("--json", "update", "1", "--status", "doing")
     updated = json.loads(out)
 
     assert updated["title"] == "root"
     assert updated["description"] == "元の詳細"
-    assert updated["completed"] is True
+    assert updated["status"] == "doing"
 
-    _, out, _ = run_cli("--json", "update", "1", "--not-completed")
-    assert json.loads(out)["completed"] is False
+    _, out, _ = run_cli("--json", "update", "1", "--status", "done")
+    assert json.loads(out)["status"] == "done"
+
+    _, out, _ = run_cli("--json", "update", "1", "--title", "renamed")
+    assert json.loads(out)["status"] == "done"
+
+
+def test_list_filters_by_status(run_cli) -> None:
+    run_cli("add", "手つかず")
+    run_cli("add", "作業中", "--status", "doing")
+
+    _, out, _ = run_cli("list", "--status", "doing")
+
+    assert out == "[~] #2 (task) 作業中 parent=root position=1"
 
 
 def test_move_changes_parent_and_position(run_cli) -> None:

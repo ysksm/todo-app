@@ -1,14 +1,30 @@
-from pydantic import BaseModel
+from typing import Any
 
+from pydantic import BaseModel, model_validator
+
+from core.models.todo_status import TodoStatus
 from core.models.todo_type import TodoType
 
 
 class TodoBase(BaseModel):
     title: str
     description: str = ""
-    completed: bool = False
+    #: 省略時は ToDo。
+    status: TodoStatus = TodoStatus.TODO
     #: 省略時は Task。type を持たない古い行を読むときもここが効く。
     type: TodoType = TodoType.TASK
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_completed(cls, data: Any) -> Any:
+        """status を入れる前の行・リクエストは completed: bool を持つ。
+
+        completed=true は done、false は todo として読む。
+        """
+        if isinstance(data, dict) and "status" not in data and "completed" in data:
+            data = dict(data)
+            data["status"] = TodoStatus.DONE if data.pop("completed") else TodoStatus.TODO
+        return data
 
 
 class TodoCreate(TodoBase):

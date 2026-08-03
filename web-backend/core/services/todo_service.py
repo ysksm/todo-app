@@ -5,7 +5,15 @@ from collections import defaultdict
 from core.errors import TodoNotFoundError
 from core.events import TodoEvent, TodoEventBroker
 from core.models.todo import Todo, TodoCreate, TodoMove, TodoUpdate
+from core.models.todo_status import TodoStatus
 from core.repositories.todo_repository import TodoRepository
+
+#: 木のテキスト表現で使う状態マーカー。
+STATUS_MARKS = {
+    TodoStatus.TODO: "[ ]",
+    TodoStatus.DOING: "[~]",
+    TodoStatus.DONE: "[x]",
+}
 
 
 class TodoService:
@@ -22,9 +30,12 @@ class TodoService:
         self.repository = repository
         self.events = events or TodoEventBroker()
 
-    def list_todos(self) -> list[Todo]:
-        """深さ優先・position 昇順で全件返す。"""
-        return self.repository.list()
+    def list_todos(self, status: TodoStatus | None = None) -> list[Todo]:
+        """深さ優先・position 昇順で返す。status を渡すとその状態だけに絞る。"""
+        todos = self.repository.list()
+        if status is None:
+            return todos
+        return [todo for todo in todos if todo.status is status]
 
     def get_todo(self, todo_id: int) -> Todo:
         todo = self.repository.get(todo_id)
@@ -79,7 +90,7 @@ class TodoService:
 
         depths = self._depths(todos)
         return "\n".join(
-            f"{'  ' * depths[todo.id]}{'[x]' if todo.completed else '[ ]'} "
+            f"{'  ' * depths[todo.id]}{STATUS_MARKS[todo.status]} "
             f"#{todo.id} ({todo.type}) {todo.title}"
             + (f" — {todo.description}" if todo.description else "")
             for todo in todos

@@ -73,8 +73,13 @@ idle.
 A todo has at most one parent (`parent_id`) and keeps a `position` among its
 siblings. Todos without a parent are roots, and there can be more than one.
 
+Each todo has a `status` of `todo`, `doing`, or `done` (default `todo`).
+`GET /api/todos?status=doing` returns only todos in that status. Rows or
+requests that still carry the legacy `completed` boolean are accepted:
+`true` maps to `done`, `false` to `todo`.
+
 - `POST` takes `parent_id` to add the todo under an existing todo. `null` adds a root.
-- `PUT` only replaces `title` / `description` / `completed`. It never changes
+- `PUT` only replaces `title` / `description` / `status` / `type`. It never changes
   `parent_id` or `position`.
 - `PATCH .../move` changes `parent_id` and `position`. A `position` of `null`
   appends to the end; out-of-range values are clamped.
