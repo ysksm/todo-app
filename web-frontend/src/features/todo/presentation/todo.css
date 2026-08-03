@@ -194,9 +194,41 @@
 
 .todo-filter {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  margin-bottom: 16px;
+}
+
+.todo-filter__group {
+  display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 16px;
+}
+
+.todo-filter__group--search {
+  flex: 1;
+  min-width: 180px;
+}
+
+.todo-filter__select {
+  padding: 4px 8px;
+  border: 1px solid #bdc9c1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #15211c;
+  font-size: 13px;
+}
+
+.todo-filter__search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 10px;
+  border: 1px solid #bdc9c1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #15211c;
+  font-size: 13px;
 }
 
 .todo-filter__label {

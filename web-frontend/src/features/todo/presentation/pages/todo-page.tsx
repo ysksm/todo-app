@@ -6,6 +6,7 @@ import {
   TODO_STATUS_LABELS,
   type TodoStatus,
 } from '../../domain/entities/todo-status'
+import { TODO_TYPES, TODO_TYPE_LABELS, type TodoType } from '../../domain/entities/todo-type'
 import type { TodoViewMode } from '../store/todo-slice'
 import { KanbanView } from '../components/kanban/kanban-view'
 import { MindmapView } from '../components/mindmap/mindmap-view'
@@ -42,6 +43,8 @@ export function TodoPage({ dependencies, mcpDependencies }: TodoPageProps) {
     selectedTodo,
     viewMode,
     statusFilter,
+    typeFilter,
+    searchQuery,
     create,
     createTodo,
     update,
@@ -52,6 +55,8 @@ export function TodoPage({ dependencies, mcpDependencies }: TodoPageProps) {
     closeDialog,
     changeViewMode,
     changeStatusFilter,
+    changeTypeFilter,
+    changeSearchQuery,
   } = useTodos(dependencies)
 
   const doneCount = todos.filter((todo) => todo.status === 'done').length
@@ -89,20 +94,54 @@ export function TodoPage({ dependencies, mcpDependencies }: TodoPageProps) {
 
         {!isMindmap && <TodoForm isSaving={isSaving} onCreate={create} />}
 
-        {viewMode === 'list' && (
-          <div className="todo-filter" role="group" aria-label="状態で絞り込み">
-            <span className="todo-filter__label">状態:</span>
-            {STATUS_FILTERS.map(({ status, label }) => (
-              <button
-                key={status ?? 'all'}
-                type="button"
-                aria-pressed={statusFilter === status}
-                className={`todo-filter__chip${statusFilter === status ? ' todo-filter__chip--active' : ''}`}
-                onClick={() => changeStatusFilter(status)}
+        {!isMindmap && (
+          <div className="todo-filter" role="group" aria-label="絞り込み">
+            {viewMode === 'list' && (
+              <div className="todo-filter__group">
+                <span className="todo-filter__label">状態:</span>
+                {STATUS_FILTERS.map(({ status, label }) => (
+                  <button
+                    key={status ?? 'all'}
+                    type="button"
+                    aria-pressed={statusFilter === status}
+                    className={`todo-filter__chip${statusFilter === status ? ' todo-filter__chip--active' : ''}`}
+                    onClick={() => changeStatusFilter(status)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="todo-filter__group">
+              <label className="todo-filter__label" htmlFor="todo-filter-type">種別:</label>
+              <select
+                id="todo-filter-type"
+                className="todo-filter__select"
+                value={typeFilter ?? ''}
+                onChange={(event) =>
+                  changeTypeFilter(
+                    event.target.value === '' ? null : (event.target.value as TodoType),
+                  )
+                }
               >
-                {label}
-              </button>
-            ))}
+                <option value="">すべて</option>
+                {TODO_TYPES.map((todoType) => (
+                  <option key={todoType} value={todoType}>
+                    {TODO_TYPE_LABELS[todoType]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="todo-filter__group todo-filter__group--search">
+              <input
+                type="search"
+                className="todo-filter__search"
+                value={searchQuery}
+                placeholder="タイトル・詳細を検索"
+                aria-label="タイトル・詳細を検索"
+                onChange={(event) => changeSearchQuery(event.target.value)}
+              />
+            </div>
           </div>
         )}
 
@@ -119,11 +158,17 @@ export function TodoPage({ dependencies, mcpDependencies }: TodoPageProps) {
             onDelete={remove}
           />
         ) : viewMode === 'kanban' ? (
-          <KanbanView todos={todos} isSaving={isSaving} onUpdate={update} onOpen={openDialog} />
+          <KanbanView
+            todos={todos}
+            filter={{ status: null, type: typeFilter, query: searchQuery }}
+            isSaving={isSaving}
+            onUpdate={update}
+            onOpen={openDialog}
+          />
         ) : (
           <TodoList
             todos={todos}
-            statusFilter={statusFilter}
+            filter={{ status: statusFilter, type: typeFilter, query: searchQuery }}
             isSaving={isSaving}
             onUpdate={update}
             onDelete={remove}

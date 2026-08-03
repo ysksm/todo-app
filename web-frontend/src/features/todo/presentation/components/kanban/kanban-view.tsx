@@ -1,5 +1,6 @@
 import { useMemo, type DragEvent } from 'react'
 import type { Todo } from '../../../domain/entities/todo'
+import { matchesFilter, type TodoFilter } from '../../../domain/entities/todo-filter'
 import {
   TODO_STATUSES,
   TODO_STATUS_LABELS,
@@ -10,12 +11,14 @@ import { TODO_TYPE_LABELS } from '../../../domain/entities/todo-type'
 
 interface KanbanViewProps {
   todos: readonly Todo[]
+  /** 種別・検索の絞り込み。状態は列そのものなので filter.status は使わない。 */
+  filter: TodoFilter
   isSaving: boolean
   onUpdate(todo: Todo): Promise<boolean>
   onOpen(id: number): void
 }
 
-export function KanbanView({ todos, isSaving, onUpdate, onOpen }: KanbanViewProps) {
+export function KanbanView({ todos, filter, isSaving, onUpdate, onOpen }: KanbanViewProps) {
   // 列の中でも木の並び（深さ優先）を保つと、親子が近くに並んで読みやすい。
   const ordered = useMemo(
     () => flattenTree(buildTodoTree(todos)).map((node) => node.todo),
@@ -24,10 +27,12 @@ export function KanbanView({ todos, isSaving, onUpdate, onOpen }: KanbanViewProp
   const byStatus = useMemo(() => {
     const columns: Record<TodoStatus, Todo[]> = { todo: [], doing: [], done: [] }
     for (const todo of ordered) {
-      columns[todo.status].push(todo)
+      if (matchesFilter(todo, { ...filter, status: null })) {
+        columns[todo.status].push(todo)
+      }
     }
     return columns
-  }, [ordered])
+  }, [ordered, filter])
   const titleById = useMemo(() => new Map(todos.map((todo) => [todo.id, todo.title])), [todos])
 
   function moveTo(todo: Todo, status: TodoStatus) {

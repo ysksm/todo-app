@@ -99,6 +99,22 @@ describe('todoReducer', () => {
     expect(cleared.statusFilter).toBeNull()
   })
 
+  it('stores the type filter', () => {
+    const filtered = todoReducer(undefined, todoActions.typeFilterChanged('bug'))
+    expect(filtered.typeFilter).toBe('bug')
+
+    const cleared = todoReducer(filtered, todoActions.typeFilterChanged(null))
+    expect(cleared.typeFilter).toBeNull()
+  })
+
+  it('stores the search query', () => {
+    const state = todoReducer(undefined, todoActions.searchQueryChanged('牛乳'))
+    expect(state.searchQuery).toBe('牛乳')
+
+    const cleared = todoReducer(state, todoActions.searchQueryChanged(''))
+    expect(cleared.searchQuery).toBe('')
+  })
+
   it('leaves editing when the view mode changes', () => {
     const state = todoReducer(
       todoReducer(undefined, todoActions.editingStarted(1)),

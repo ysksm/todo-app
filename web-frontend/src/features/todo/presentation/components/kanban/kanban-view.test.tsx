@@ -18,6 +18,7 @@ const TODOS: readonly Todo[] = [
 function renderKanban(overrides: Partial<Parameters<typeof KanbanView>[0]> = {}) {
   const props = {
     todos: TODOS,
+    filter: { status: null, type: null, query: '' },
     isSaving: false,
     onUpdate: vi.fn().mockResolvedValue(true),
     onOpen: vi.fn(),
@@ -103,6 +104,25 @@ describe('KanbanView', () => {
     fireEvent.drop(screen.getByRole('region', { name: 'Doing' }), { dataTransfer })
 
     expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ id: 1, status: 'doing' }))
+  })
+
+  it('hides cards that do not match the text search', () => {
+    renderKanban({ filter: { status: null, type: null, query: '作業' } })
+
+    expect(column('Doing').getByText('作業中')).toBeInTheDocument()
+    expect(screen.queryByText('手つかず')).not.toBeInTheDocument()
+    expect(screen.queryByText('完了済み')).not.toBeInTheDocument()
+  })
+
+  it('hides cards that do not match the type filter', () => {
+    const bug: Todo = { ...todo(4, 'doing', 'バグ修正'), type: 'bug' }
+    renderKanban({
+      todos: [...TODOS, bug],
+      filter: { status: null, type: 'bug', query: '' },
+    })
+
+    expect(column('Doing').getByText('バグ修正')).toBeInTheDocument()
+    expect(screen.queryByText('作業中')).not.toBeInTheDocument()
   })
 
   it('does not update when a card is dropped on its own column', () => {

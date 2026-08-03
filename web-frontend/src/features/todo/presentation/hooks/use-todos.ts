@@ -20,6 +20,8 @@ interface TodoState {
   selectedTodo: Todo | null
   viewMode: TodoViewMode
   statusFilter: TodoStatus | null
+  typeFilter: TodoType | null
+  searchQuery: string
   reload(): Promise<void>
   create(title: string, type: TodoType): Promise<boolean>
   createTodo(draft: TodoDraft): Promise<Todo | null>
@@ -31,11 +33,14 @@ interface TodoState {
   closeDialog(): void
   changeViewMode(mode: TodoViewMode): void
   changeStatusFilter(status: TodoStatus | null): void
+  changeTypeFilter(type: TodoType | null): void
+  changeSearchQuery(query: string): void
 }
 
 export function useTodos(dependencies: TodoDependencies): TodoState {
   const dispatch = useDispatch()
-  const { todos, status, error, viewMode, statusFilter } = useSelector(selectTodoState)
+  const { todos, status, error, viewMode, statusFilter, typeFilter, searchQuery } =
+    useSelector(selectTodoState)
   const selectedTodo = useSelector(selectSelectedTodo)
 
   const reload = useCallback(async () => {
@@ -166,6 +171,20 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
     [dispatch],
   )
 
+  const changeTypeFilter = useCallback(
+    (typeFilter: TodoType | null) => {
+      dispatch(todoActions.typeFilterChanged(typeFilter))
+    },
+    [dispatch],
+  )
+
+  const changeSearchQuery = useCallback(
+    (query: string) => {
+      dispatch(todoActions.searchQueryChanged(query))
+    },
+    [dispatch],
+  )
+
   return {
     todos,
     isLoading: status === 'loading',
@@ -174,6 +193,8 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
     selectedTodo,
     viewMode,
     statusFilter,
+    typeFilter,
+    searchQuery,
     reload,
     create,
     createTodo,
@@ -185,5 +206,7 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
     closeDialog,
     changeViewMode,
     changeStatusFilter,
+    changeTypeFilter,
+    changeSearchQuery,
   }
 }

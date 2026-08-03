@@ -26,6 +26,10 @@ export interface TodoStoreState {
   viewMode: TodoViewMode
   /** null なら全状態を表示する。 */
   statusFilter: TodoStatus | null
+  /** null なら全種類を表示する。 */
+  typeFilter: TodoType | null
+  /** タイトル・詳細への部分一致。空文字なら絞らない。 */
+  searchQuery: string
   focusedTodoId: number | null
   editingTodoId: number | null
   collapsedIds: number[]
@@ -43,6 +47,8 @@ const initialState: TodoStoreState = {
   selectedTodoId: null,
   viewMode: 'list',
   statusFilter: null,
+  typeFilter: null,
+  searchQuery: '',
   focusedTodoId: null,
   editingTodoId: null,
   collapsedIds: [],
@@ -101,6 +107,12 @@ const todoSlice = createSlice({
     },
     statusFilterChanged(state, action: PayloadAction<TodoStatus | null>) {
       state.statusFilter = action.payload
+    },
+    typeFilterChanged(state, action: PayloadAction<TodoType | null>) {
+      state.typeFilter = action.payload
+    },
+    searchQueryChanged(state, action: PayloadAction<string>) {
+      state.searchQuery = action.payload
     },
     focusMoved(state, action: PayloadAction<number | null>) {
       state.focusedTodoId = action.payload
