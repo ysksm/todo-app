@@ -1,9 +1,10 @@
+import type { TodoStatus } from './todo-status'
 import type { TodoType } from './todo-type'
 
 export interface TodoContent {
   readonly title: string
   readonly description: string
-  readonly completed: boolean
+  readonly status: TodoStatus
   readonly type: TodoType
 }
 

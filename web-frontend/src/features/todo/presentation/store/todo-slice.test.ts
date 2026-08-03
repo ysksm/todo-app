@@ -3,7 +3,7 @@ import type { Todo } from '../../domain/entities/todo'
 import { DRAFT_TODO_ID, todoActions, todoReducer } from './todo-slice'
 
 function todo(id: number, parentId: number | null = null, title = `todo-${id}`): Todo {
-  return { id, title, description: '', completed: false, type: 'task', parentId, position: 0 }
+  return { id, title, description: '', status: 'todo', type: 'task', parentId, position: 0 }
 }
 
 describe('todoReducer', () => {
@@ -89,6 +89,30 @@ describe('todoReducer', () => {
     )
 
     expect(state.editingTodoId).toBe(DRAFT_TODO_ID)
+  })
+
+  it('stores the status filter', () => {
+    const filtered = todoReducer(undefined, todoActions.statusFilterChanged('doing'))
+    expect(filtered.statusFilter).toBe('doing')
+
+    const cleared = todoReducer(filtered, todoActions.statusFilterChanged(null))
+    expect(cleared.statusFilter).toBeNull()
+  })
+
+  it('stores the type filter', () => {
+    const filtered = todoReducer(undefined, todoActions.typeFilterChanged('bug'))
+    expect(filtered.typeFilter).toBe('bug')
+
+    const cleared = todoReducer(filtered, todoActions.typeFilterChanged(null))
+    expect(cleared.typeFilter).toBeNull()
+  })
+
+  it('stores the search query', () => {
+    const state = todoReducer(undefined, todoActions.searchQueryChanged('牛乳'))
+    expect(state.searchQuery).toBe('牛乳')
+
+    const cleared = todoReducer(state, todoActions.searchQueryChanged(''))
+    expect(cleared.searchQuery).toBe('')
   })
 
   it('leaves editing when the view mode changes', () => {

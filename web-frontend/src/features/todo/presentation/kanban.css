@@ -1,0 +1,140 @@
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.kanban__column {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #c6d1c9;
+  border-radius: 8px;
+  background: #f2f6f3;
+}
+
+.kanban__column--doing {
+  border-color: #d9c193;
+  background: #fbf6ec;
+}
+
+.kanban__column--done {
+  border-color: #9dbfab;
+  background: #eef5f0;
+}
+
+.kanban__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kanban__header h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.kanban__count {
+  min-width: 24px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #33483b;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.kanban__cards {
+  display: grid;
+  gap: 8px;
+  min-height: 48px;
+}
+
+.kanban__empty {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed #a9b8ae;
+  border-radius: 6px;
+  color: #65786b;
+  font-size: 13px;
+  text-align: center;
+}
+
+.kanban-card {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #c6d1c9;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: grab;
+}
+
+.kanban-card__body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.kanban-card__body strong {
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.kanban-card__body small {
+  overflow-wrap: anywhere;
+  color: #53685a;
+  font-size: 12px;
+}
+
+.kanban-card__parent {
+  color: #65786b;
+}
+
+.kanban__column--done .kanban-card__body strong {
+  color: #65786b;
+  text-decoration: line-through;
+}
+
+.kanban-card__actions {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.kanban-card__actions button {
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #bdc9c1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #33483b;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.kanban-card__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+@media (max-width: 720px) {
+  .kanban {
+    grid-template-columns: 1fr;
+  }
+}

@@ -102,7 +102,7 @@
   box-shadow: 0 0 0 2px #2f694c;
 }
 
-.mindmap-node--completed .mindmap-node__title {
+.mindmap-node--done .mindmap-node__title {
   color: #7c8d83;
   text-decoration: line-through;
 }
@@ -122,10 +122,30 @@
   white-space: nowrap;
 }
 
-.mindmap-node__checkbox {
+.mindmap-node__status {
   flex: none;
   margin: 0;
+  padding: 1px 7px;
+  border: 1px solid #93a99b;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #33483b;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
   cursor: pointer;
+}
+
+.mindmap-node__status--doing {
+  border-color: #b3873a;
+  background: #fdf3e0;
+  color: #7a5a1d;
+}
+
+.mindmap-node__status--done {
+  border-color: #397354;
+  background: #e7f2ea;
+  color: #2f694c;
 }
 
 .mindmap-node__toggle {

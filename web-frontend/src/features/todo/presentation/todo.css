@@ -192,6 +192,68 @@
   font-weight: 600;
 }
 
+.todo-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  margin-bottom: 16px;
+}
+
+.todo-filter__group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.todo-filter__group--search {
+  flex: 1;
+  min-width: 180px;
+}
+
+.todo-filter__select {
+  padding: 4px 8px;
+  border: 1px solid #bdc9c1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #15211c;
+  font-size: 13px;
+}
+
+.todo-filter__search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 10px;
+  border: 1px solid #bdc9c1;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #15211c;
+  font-size: 13px;
+}
+
+.todo-filter__label {
+  color: #33483b;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.todo-filter__chip {
+  padding: 4px 12px;
+  border: 1px solid #bdc9c1;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #496053;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.todo-filter__chip--active {
+  border-color: #2f694c;
+  background: #2f694c;
+  color: #ffffff;
+  font-weight: 600;
+}
+
 .todo-list {
   display: grid;
   gap: 8px;
@@ -226,11 +288,29 @@
   cursor: pointer;
 }
 
-.todo-item__summary input {
-  width: 18px;
-  height: 18px;
-  margin: 2px 0 0;
-  accent-color: #397354;
+.todo-item__status {
+  flex: none;
+  margin-top: 2px;
+  padding: 3px 8px;
+  border: 1px solid #93a99b;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #33483b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.todo-item__status--doing {
+  border-color: #b3873a;
+  background: #fdf3e0;
+  color: #7a5a1d;
+}
+
+.todo-item__status--done {
+  border-color: #397354;
+  background: #e7f2ea;
+  color: #2f694c;
 }
 
 .todo-item__summary button {
@@ -257,7 +337,7 @@
   font-size: 14px;
 }
 
-.todo-item--completed strong {
+.todo-item--done strong {
   color: #65786b;
   text-decoration: line-through;
 }
@@ -325,19 +405,6 @@
   margin-top: -2px;
   color: #53685a;
   font-size: 12px;
-}
-
-.todo-dialog__completed {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 8px 0;
-}
-
-.todo-dialog__completed input {
-  width: 18px;
-  height: 18px;
-  accent-color: #397354;
 }
 
 .todo-dialog__actions {

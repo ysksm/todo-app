@@ -7,6 +7,7 @@ from core.errors import (
     TodoNotFoundError,
 )
 from core.models.todo import TodoCreate, TodoMove, TodoUpdate
+from core.models.todo_status import TodoStatus
 from core.models.todo_type import TodoType
 from core.services.todo_service import TodoService
 
@@ -58,26 +59,44 @@ def test_delete_returns_every_removed_id(service: TodoService, add_todo) -> None
 def test_render_tree_indents_by_depth(service: TodoService, add_todo) -> None:
     root = add_todo("アプリを作る")
     backend = add_todo("バックエンド", parent_id=root.id)
-    add_todo("move API", parent_id=backend.id)
+    move_api = add_todo("move API", parent_id=backend.id)
     add_todo("フロントエンド", parent_id=root.id)
     service.update_todo(
         backend.id,
         TodoUpdate(
             title="バックエンド",
             description="FastAPI",
-            completed=True,
+            status=TodoStatus.DONE,
             type=TodoType.EPIC,
         ),
+    )
+    service.update_todo(
+        move_api.id,
+        TodoUpdate(title="move API", status=TodoStatus.DOING, type=TodoType.USER_STORY),
     )
 
     assert service.render_tree() == "\n".join(
         [
             "[ ] #1 (product) アプリを作る",
             "  [x] #2 (epic) バックエンド — FastAPI",
-            "    [ ] #3 (user_story) move API",
+            "    [~] #3 (user_story) move API",
             "  [ ] #4 (epic) フロントエンド",
         ]
     )
+
+
+def test_list_todos_filters_by_status(service: TodoService, add_todo) -> None:
+    todo = add_todo("todo のまま")
+    doing = add_todo("作業中")
+    service.update_todo(
+        doing.id,
+        TodoUpdate(title="作業中", status=TodoStatus.DOING, type=doing.type),
+    )
+
+    assert [t.id for t in service.list_todos(status=TodoStatus.TODO)] == [todo.id]
+    assert [t.id for t in service.list_todos(status=TodoStatus.DOING)] == [doing.id]
+    assert service.list_todos(status=TodoStatus.DONE) == []
+    assert len(service.list_todos()) == 2
 
 
 def test_render_tree_when_empty(service: TodoService) -> None:

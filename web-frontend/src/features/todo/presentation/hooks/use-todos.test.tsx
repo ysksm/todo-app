@@ -8,7 +8,7 @@ import type { Todo } from '../../domain/entities/todo'
 import { useTodos } from './use-todos'
 
 function todo(id: number, parentId: number | null, title = `todo-${id}`): Todo {
-  return { id, title, description: '', completed: false, type: 'task', parentId, position: 0 }
+  return { id, title, description: '', status: 'todo', type: 'task', parentId, position: 0 }
 }
 
 /** root(1) ─ child(2) ── grandchild(3) / lonely(4) */
@@ -140,7 +140,7 @@ describe('useTodos mutations', () => {
     expect(dependencies.createTodo.execute).toHaveBeenCalledWith({
       title: '新しいタスク',
       description: '',
-      completed: false,
+      status: 'todo',
       type: 'product',
       parentId: null,
     })
@@ -157,7 +157,7 @@ describe('useTodos mutations', () => {
       result.current.createTodo({
         title: '子',
         description: '',
-        completed: false,
+        status: 'todo',
         type: 'epic',
         parentId: 1,
       }),

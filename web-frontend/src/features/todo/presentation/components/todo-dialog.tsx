@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import type { Todo } from '../../domain/entities/todo'
 import {
+  TODO_STATUSES,
+  TODO_STATUS_LABELS,
+  type TodoStatus,
+} from '../../domain/entities/todo-status'
+import {
   TODO_TYPE_LABELS,
   selectableTypes,
   type TodoType,
@@ -29,7 +34,7 @@ export function TodoDialog({
   const dialogRef = useRef<HTMLDialogElement>(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [completed, setCompleted] = useState(false)
+  const [status, setStatus] = useState<TodoStatus>('todo')
   const [type, setType] = useState<TodoType>('task')
 
   const parentType = useMemo(() => {
@@ -69,7 +74,7 @@ export function TodoDialog({
     if (todo) {
       setTitle(todo.title)
       setDescription(todo.description)
-      setCompleted(todo.completed)
+      setStatus(todo.status)
       setType(todo.type)
     }
   }, [todo])
@@ -80,14 +85,14 @@ export function TodoDialog({
       return
     }
 
-    if (await onUpdate({ ...todo, title, description, completed, type })) {
+    if (await onUpdate({ ...todo, title, description, status, type })) {
       onClose()
     }
   }
 
   function commitDraft() {
     if (todo) {
-      onDraftChange({ ...todo, title, description, completed, type })
+      onDraftChange({ ...todo, title, description, status, type })
     }
   }
 
@@ -146,15 +151,19 @@ export function TodoDialog({
             onBlur={commitDraft}
             disabled={isSaving}
           />
-          <label className="todo-dialog__completed">
-            <input
-              type="checkbox"
-              checked={completed}
-              onChange={(event) => setCompleted(event.target.checked)}
-              disabled={isSaving}
-            />
-            完了
-          </label>
+          <label htmlFor="dialog-todo-status">状態</label>
+          <select
+            id="dialog-todo-status"
+            value={status}
+            onChange={(event) => setStatus(event.target.value as TodoStatus)}
+            disabled={isSaving}
+          >
+            {TODO_STATUSES.map((todoStatus) => (
+              <option key={todoStatus} value={todoStatus}>
+                {TODO_STATUS_LABELS[todoStatus]}
+              </option>
+            ))}
+          </select>
           <footer className="todo-dialog__actions">
             <button type="button" className="todo-dialog__delete" onClick={() => void handleDelete()} disabled={isSaving}>削除</button>
             <div>

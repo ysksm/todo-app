@@ -18,12 +18,15 @@ from pathlib import Path
 
 from core.errors import TodoError
 from core.models.todo import Todo, TodoCreate, TodoMove, TodoUpdate
+from core.models.todo_status import TodoStatus
 from core.models.todo_type import TodoType
 from core.repositories.todo_repository import TodoRepository
-from core.services.todo_service import TodoService
+from core.services.todo_service import STATUS_MARKS, TodoService
 
 TYPE_CHOICES = [todo_type.value for todo_type in TodoType]
 TYPE_HELP = f"タスクの種類（{' / '.join(TYPE_CHOICES)}）"
+STATUS_CHOICES = [todo_status.value for todo_status in TodoStatus]
+STATUS_HELP = f"タスクの状態（{' / '.join(STATUS_CHOICES)}）"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,7 +36,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    subparsers.add_parser("list", help="全タスクを 1 行ずつ表示する")
+    list_command = subparsers.add_parser("list", help="全タスクを 1 行ずつ表示する")
+    list_command.add_argument(
+        "--status",
+        choices=STATUS_CHOICES,
+        default=None,
+        help=f"{STATUS_HELP}。指定するとその状態だけ表示する",
+    )
     subparsers.add_parser("tree", help="全タスクを木として表示する")
 
     show = subparsers.add_parser("show", help="1 件表示する")
@@ -43,7 +52,12 @@ def build_parser() -> argparse.ArgumentParser:
     add.add_argument("title")
     add.add_argument("--description", default="")
     add.add_argument("--parent", type=int, default=None, help="親タスクの id")
-    add.add_argument("--completed", action="store_true")
+    add.add_argument(
+        "--status",
+        choices=STATUS_CHOICES,
+        default=TodoStatus.TODO.value,
+        help=STATUS_HELP,
+    )
     add.add_argument(
         "--type",
         choices=TYPE_CHOICES,
@@ -61,9 +75,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=f"{TYPE_HELP}。省略すると今の種類のまま",
     )
-    completion = update.add_mutually_exclusive_group()
-    completion.add_argument("--completed", dest="completed", action="store_true", default=None)
-    completion.add_argument("--not-completed", dest="completed", action="store_false")
+    update.add_argument(
+        "--status",
+        choices=STATUS_CHOICES,
+        default=None,
+        help=f"{STATUS_HELP}。省略すると今の状態のまま",
+    )
 
     move = subparsers.add_parser("move", help="親と並び順を変える")
     move.add_argument("todo_id", type=int)
@@ -97,7 +114,9 @@ def run_command(service: TodoService, args: argparse.Namespace) -> str:
 
     match args.command:
         case "list":
-            todos = service.list_todos()
+            todos = service.list_todos(
+                status=TodoStatus(args.status) if args.status is not None else None
+            )
             return (
                 dump_json([todo.model_dump() for todo in todos])
                 if as_json
@@ -114,7 +133,7 @@ def run_command(service: TodoService, args: argparse.Namespace) -> str:
                 TodoCreate(
                     title=args.title,
                     description=args.description,
-                    completed=args.completed,
+                    status=TodoStatus(args.status),
                     parent_id=args.parent,
                     type=TodoType(args.type),
                 )
@@ -129,7 +148,7 @@ def run_command(service: TodoService, args: argparse.Namespace) -> str:
                     description=(
                         args.description if args.description is not None else current.description
                     ),
-                    completed=args.completed if args.completed is not None else current.completed,
+                    status=TodoStatus(args.status) if args.status is not None else current.status,
                     type=TodoType(args.type) if args.type is not None else current.type,
                 ),
             )
@@ -154,7 +173,7 @@ def render_todo(todo: Todo, as_json: bool) -> str:
 
 
 def format_todo(todo: Todo) -> str:
-    checkbox = "[x]" if todo.completed else "[ ]"
+    checkbox = STATUS_MARKS[todo.status]
     parent = f" parent=#{todo.parent_id}" if todo.parent_id is not None else " parent=root"
     description = f" — {todo.description}" if todo.description else ""
     return (

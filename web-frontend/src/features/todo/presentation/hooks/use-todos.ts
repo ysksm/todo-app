@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { Todo, TodoDraft, TodoMove, TodoUpdate } from '../../domain/entities/todo'
+import type { TodoStatus } from '../../domain/entities/todo-status'
 import type { TodoType } from '../../domain/entities/todo-type'
 import type { TodoDependencies } from '../../di/todo-dependencies'
 import { confirmCascadingDelete } from '../confirm-cascading-delete'
@@ -18,6 +19,9 @@ interface TodoState {
   error: string | null
   selectedTodo: Todo | null
   viewMode: TodoViewMode
+  statusFilter: TodoStatus | null
+  typeFilter: TodoType | null
+  searchQuery: string
   reload(): Promise<void>
   create(title: string, type: TodoType): Promise<boolean>
   createTodo(draft: TodoDraft): Promise<Todo | null>
@@ -28,11 +32,15 @@ interface TodoState {
   openDialog(id: number): void
   closeDialog(): void
   changeViewMode(mode: TodoViewMode): void
+  changeStatusFilter(status: TodoStatus | null): void
+  changeTypeFilter(type: TodoType | null): void
+  changeSearchQuery(query: string): void
 }
 
 export function useTodos(dependencies: TodoDependencies): TodoState {
   const dispatch = useDispatch()
-  const { todos, status, error, viewMode } = useSelector(selectTodoState)
+  const { todos, status, error, viewMode, statusFilter, typeFilter, searchQuery } =
+    useSelector(selectTodoState)
   const selectedTodo = useSelector(selectSelectedTodo)
 
   const reload = useCallback(async () => {
@@ -93,7 +101,7 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
       const created = await createTodo({
         title,
         description: '',
-        completed: false,
+        status: 'todo',
         type,
         parentId: null,
       })
@@ -156,6 +164,27 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
     [dispatch],
   )
 
+  const changeStatusFilter = useCallback(
+    (statusFilter: TodoStatus | null) => {
+      dispatch(todoActions.statusFilterChanged(statusFilter))
+    },
+    [dispatch],
+  )
+
+  const changeTypeFilter = useCallback(
+    (typeFilter: TodoType | null) => {
+      dispatch(todoActions.typeFilterChanged(typeFilter))
+    },
+    [dispatch],
+  )
+
+  const changeSearchQuery = useCallback(
+    (query: string) => {
+      dispatch(todoActions.searchQueryChanged(query))
+    },
+    [dispatch],
+  )
+
   return {
     todos,
     isLoading: status === 'loading',
@@ -163,6 +192,9 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
     error,
     selectedTodo,
     viewMode,
+    statusFilter,
+    typeFilter,
+    searchQuery,
     reload,
     create,
     createTodo,
@@ -173,5 +205,8 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
     openDialog,
     closeDialog,
     changeViewMode,
+    changeStatusFilter,
+    changeTypeFilter,
+    changeSearchQuery,
   }
 }

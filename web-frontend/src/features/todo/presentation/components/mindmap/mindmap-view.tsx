@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { Todo, TodoDraft, TodoMove, TodoUpdate } from '../../../domain/entities/todo'
+import { nextStatus } from '../../../domain/entities/todo-status'
 import type { TodoNode } from '../../../domain/entities/todo-tree'
 import { useMindmapNavigation } from '../../hooks/use-mindmap-navigation'
 import { MindmapNode } from './mindmap-node'
@@ -60,12 +61,12 @@ export function MindmapView({
     navigation.handleKeyDown(event)
   }
 
-  function toggleCompleted(node: TodoNode) {
+  function cycleStatus(node: TodoNode) {
     void onUpdate({
       id: node.todo.id,
       title: node.todo.title,
       description: node.todo.description,
-      completed: !node.todo.completed,
+      status: nextStatus(node.todo.status),
       type: node.todo.type,
     })
   }
@@ -123,7 +124,7 @@ export function MindmapView({
                 isSaving={isSaving}
                 onFocus={navigation.focusNode}
                 onToggleCollapse={navigation.toggleCollapse}
-                onToggleCompleted={toggleCompleted}
+                onCycleStatus={cycleStatus}
                 onStartEditing={navigation.startEditing}
                 onCommitEditing={(title) => void navigation.commitEditing(title)}
                 onCancelEditing={navigation.cancelEditing}

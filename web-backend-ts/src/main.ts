@@ -5,18 +5,23 @@ import { serveStatic, assetCount, normalizePath } from "./static";
 const PORT = 8000;
 const API_PREFIX = "/api/";
 
+// 状態は todo → doing → done と進む。
 type TodoCreate = {
   title: string;
   description: string;
-  completed: boolean;
+  status: string;
 };
 
 type Todo = {
   id: number;
   title: string;
   description: string;
-  completed: boolean;
+  status: string;
 };
+
+function isValidStatus(value: string): boolean {
+  return value === "todo" || value === "doing" || value === "done";
+}
 
 const todos = new Map<number, Todo>();
 let nextId = 1;
@@ -62,10 +67,13 @@ function handleEvents(req: IncomingMessage, res: ServerResponse): void {
   });
 }
 
-function listTodos(): Todo[] {
+// statusFilter が空文字ならフィルタなしで全件返す。
+function listTodos(statusFilter: string): Todo[] {
   const result: Todo[] = [];
   for (const todo of todos.values()) {
-    result.push(todo);
+    if (statusFilter === "" || todo.status === statusFilter) {
+      result.push(todo);
+    }
   }
   return result;
 }
@@ -75,14 +83,15 @@ function createTodo(input: TodoCreate): Todo {
     id: nextId,
     title: input.title,
     description: input.description,
-    completed: input.completed,
+    status: input.status,
   };
   todos.set(nextId, todo);
   nextId += 1;
   return todo;
 }
 
-// pydantic の TodoCreate と同じく description / completed は省略可能。
+// pydantic の TodoCreate と同じく description / status は省略可能。
+// status を持たない旧クライアントの completed も受け付ける（true → done / false → todo）。
 // scriptc のキャストは実行時に検証され、必須フィールドが欠けると例外になる。
 function parseTodoCreate(body: string): TodoCreate {
   const required = JSON.parse(body) as { title: string };
@@ -94,14 +103,43 @@ function parseTodoCreate(body: string): TodoCreate {
     description = "";
   }
 
-  let completed = false;
+  let status = "";
   try {
-    completed = (JSON.parse(body) as { completed: boolean }).completed;
+    status = (JSON.parse(body) as { status: string }).status;
   } catch (error) {
-    completed = false;
+    status = "";
   }
 
-  return { title: required.title, description: description, completed: completed };
+  if (status === "") {
+    let completed = false;
+    try {
+      completed = (JSON.parse(body) as { completed: boolean }).completed;
+    } catch (error) {
+      completed = false;
+    }
+    status = completed ? "done" : "todo";
+  }
+
+  if (!isValidStatus(status)) {
+    throw new Error(`invalid status: ${status}`);
+  }
+
+  return { title: required.title, description: description, status: status };
+}
+
+// url のクエリから name の値を取り出す。無ければ空文字。
+function queryParam(url: string, name: string): string {
+  const queryIndex = url.indexOf("?");
+  if (queryIndex < 0) {
+    return "";
+  }
+  const query = url.slice(queryIndex + 1);
+  for (const pair of query.split("&")) {
+    if (pair.startsWith(name + "=")) {
+      return pair.slice(name.length + 1);
+    }
+  }
+  return "";
 }
 
 function sendJson(res: ServerResponse, status: number, payload: string): void {
@@ -113,8 +151,14 @@ function sendJson(res: ServerResponse, status: number, payload: string): void {
   res.end(body);
 }
 
-// API ルーター。処理したら true を返す。
-function handleApi(req: IncomingMessage, res: ServerResponse, path: string, body: string): boolean {
+// API ルーター。処理したら true を返す。url はクエリ付きの生パス。
+function handleApi(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  url: string,
+  body: string,
+): boolean {
   if (path === "/api/todos/events") {
     if (req.method === "GET") {
       handleEvents(req, res);
@@ -126,7 +170,12 @@ function handleApi(req: IncomingMessage, res: ServerResponse, path: string, body
   if (path === "/api/todos") {
     const method = req.method;
     if (method === "GET") {
-      sendJson(res, 200, JSON.stringify(listTodos()));
+      const statusFilter = queryParam(url, "status");
+      if (statusFilter !== "" && !isValidStatus(statusFilter)) {
+        sendJson(res, 422, '{"detail":"Invalid status"}');
+        return true;
+      }
+      sendJson(res, 200, JSON.stringify(listTodos(statusFilter)));
       return true;
     }
     if (method === "POST") {
@@ -156,7 +205,7 @@ function handleRequest(req: IncomingMessage, res: ServerResponse, body: string):
 
   // /api/* は必ず API が受け持つ。静的ハンドラに落ちて index.html が返らないようにする。
   if (path === "/api" || path.startsWith(API_PREFIX)) {
-    if (!handleApi(req, res, path, body)) {
+    if (!handleApi(req, res, path, url, body)) {
       sendJson(res, 404, '{"detail":"Not Found"}');
     }
     return;

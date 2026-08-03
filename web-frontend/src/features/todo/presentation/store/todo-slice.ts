@@ -1,10 +1,11 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { Todo } from '../../domain/entities/todo'
+import type { TodoStatus } from '../../domain/entities/todo-status'
 import type { TodoType } from '../../domain/entities/todo-type'
 
 type TodoRequestStatus = 'idle' | 'loading' | 'saving'
 
-export type TodoViewMode = 'list' | 'mindmap'
+export type TodoViewMode = 'list' | 'kanban' | 'mindmap'
 
 /** まだ保存されていない新規ノードの仮 id。実 id と衝突しないよう負の値を使う。 */
 export const DRAFT_TODO_ID = -1
@@ -23,6 +24,12 @@ export interface TodoStoreState {
   error: string | null
   selectedTodoId: number | null
   viewMode: TodoViewMode
+  /** null なら全状態を表示する。 */
+  statusFilter: TodoStatus | null
+  /** null なら全種類を表示する。 */
+  typeFilter: TodoType | null
+  /** タイトル・詳細への部分一致。空文字なら絞らない。 */
+  searchQuery: string
   focusedTodoId: number | null
   editingTodoId: number | null
   collapsedIds: number[]
@@ -39,6 +46,9 @@ const initialState: TodoStoreState = {
   error: null,
   selectedTodoId: null,
   viewMode: 'list',
+  statusFilter: null,
+  typeFilter: null,
+  searchQuery: '',
   focusedTodoId: null,
   editingTodoId: null,
   collapsedIds: [],
@@ -94,6 +104,15 @@ const todoSlice = createSlice({
       state.viewMode = action.payload
       state.editingTodoId = null
       state.draftNode = null
+    },
+    statusFilterChanged(state, action: PayloadAction<TodoStatus | null>) {
+      state.statusFilter = action.payload
+    },
+    typeFilterChanged(state, action: PayloadAction<TodoType | null>) {
+      state.typeFilter = action.payload
+    },
+    searchQueryChanged(state, action: PayloadAction<string>) {
+      state.searchQuery = action.payload
     },
     focusMoved(state, action: PayloadAction<number | null>) {
       state.focusedTodoId = action.payload
