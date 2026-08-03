@@ -93,7 +93,7 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
       const created = await createTodo({
         title,
         description: '',
-        completed: false,
+        status: 'todo',
         type,
         parentId: null,
       })

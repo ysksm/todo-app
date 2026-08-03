@@ -14,7 +14,7 @@ function todo(
   title = `todo-${id}`,
   type: TodoType = 'task',
 ): Todo {
-  return { id, title, description: '', completed: false, type, parentId, position }
+  return { id, title, description: '', status: 'todo', type, parentId, position }
 }
 
 /**
@@ -275,7 +275,7 @@ describe('MindmapView adding and removing', () => {
       expect(onCreate).toHaveBeenCalledWith({
         title: '新しい兄弟',
         description: '',
-        completed: false,
+        status: 'todo',
         // 兄弟なので、いま居るノードと同じ種類で作られる
         type: 'epic',
         parentId: 1,
@@ -375,13 +375,14 @@ describe('MindmapView adding and removing', () => {
     await waitFor(() => expect(focusedTitle()).toBe('child b'))
   })
 
-  it('toggles completion with Space', async () => {
+  it('cycles the status with Space', async () => {
     const { onUpdate } = renderMindmap()
 
     await user.keyboard('[Space]')
 
+    // todo → doing → done → todo と巡回する。初期状態は todo なので doing になる。
     await waitFor(() => {
-      expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ id: 1, completed: true }))
+      expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ id: 1, status: 'doing' }))
     })
   })
 })

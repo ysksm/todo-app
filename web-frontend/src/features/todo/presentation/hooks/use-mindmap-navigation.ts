@@ -1,6 +1,7 @@
 import { useCallback, useMemo, type KeyboardEvent } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { Todo, TodoDraft, TodoMove, TodoUpdate } from '../../domain/entities/todo'
+import { nextStatus } from '../../domain/entities/todo-status'
 import { defaultChildType } from '../../domain/entities/todo-type'
 import {
   buildTodoTree,
@@ -145,7 +146,7 @@ export function useMindmapNavigation(options: MindmapNavigationOptions): Mindmap
         const created = await onCreate({
           title: trimmedTitle,
           description: '',
-          completed: false,
+          status: 'todo',
           type: draftNode.type,
           parentId: draftNode.parentId,
         })
@@ -167,7 +168,7 @@ export function useMindmapNavigation(options: MindmapNavigationOptions): Mindmap
           id: editedTodo.id,
           title: trimmedTitle,
           description: editedTodo.description,
-          completed: editedTodo.completed,
+          status: editedTodo.status,
           type: editedTodo.type,
         })
       }
@@ -313,7 +314,7 @@ export function useMindmapNavigation(options: MindmapNavigationOptions): Mindmap
             id: node.todo.id,
             title: node.todo.title,
             description: node.todo.description,
-            completed: !node.todo.completed,
+            status: nextStatus(node.todo.status),
             type: node.todo.type,
           })
           return
@@ -356,7 +357,7 @@ function toDraftTodo(draftNode: TodoDraftNode): Todo {
     id: DRAFT_TODO_ID,
     title: EMPTY_DRAFT_TITLE,
     description: '',
-    completed: false,
+    status: 'todo',
     type: draftNode.type,
     parentId: draftNode.parentId,
     position: draftNode.position,

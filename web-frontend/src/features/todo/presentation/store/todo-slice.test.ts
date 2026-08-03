@@ -3,7 +3,7 @@ import type { Todo } from '../../domain/entities/todo'
 import { DRAFT_TODO_ID, todoActions, todoReducer } from './todo-slice'
 
 function todo(id: number, parentId: number | null = null, title = `todo-${id}`): Todo {
-  return { id, title, description: '', completed: false, type: 'task', parentId, position: 0 }
+  return { id, title, description: '', status: 'todo', type: 'task', parentId, position: 0 }
 }
 
 describe('todoReducer', () => {

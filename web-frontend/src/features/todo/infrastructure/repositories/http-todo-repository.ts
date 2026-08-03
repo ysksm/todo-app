@@ -24,7 +24,7 @@ export class HttpTodoRepository implements TodoRepository {
       body: JSON.stringify({
         title: draft.title,
         description: draft.description,
-        completed: draft.completed,
+        status: draft.status,
         type: draft.type,
         parent_id: draft.parentId,
       }),
@@ -39,7 +39,7 @@ export class HttpTodoRepository implements TodoRepository {
       body: JSON.stringify({
         title: todo.title,
         description: todo.description,
-        completed: todo.completed,
+        status: todo.status,
         type: todo.type,
       }),
     })
@@ -68,7 +68,7 @@ function toTodo(response: TodoResponse): Todo {
     id: response.id,
     title: response.title,
     description: response.description,
-    completed: response.completed,
+    status: response.status,
     type: response.type,
     parentId: response.parent_id,
     position: response.position,

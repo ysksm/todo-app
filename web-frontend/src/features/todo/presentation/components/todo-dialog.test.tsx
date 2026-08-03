@@ -6,7 +6,7 @@ import type { TodoType } from '../../domain/entities/todo-type'
 import { TodoDialog } from './todo-dialog'
 
 function todo(id: number, parentId: number | null, type: TodoType, title = `todo-${id}`): Todo {
-  return { id, title, description: '', completed: false, type, parentId, position: 0 }
+  return { id, title, description: '', status: 'todo', type, parentId, position: 0 }
 }
 
 function renderDialog(
@@ -30,7 +30,8 @@ function renderDialog(
 }
 
 function typeOptions(): string[] {
-  return (screen.getAllByRole('option') as HTMLOptionElement[]).map((option) => option.value)
+  const select = screen.getByLabelText('種類') as HTMLSelectElement
+  return Array.from(select.options).map((option) => option.value)
 }
 
 describe('TodoDialog', () => {
@@ -40,7 +41,7 @@ describe('TodoDialog', () => {
       id: 1,
       title: 'Buy milk',
       description: '2L',
-      completed: false,
+      status: 'todo',
       type: 'task',
       parentId: null,
       position: 0,

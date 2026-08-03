@@ -39,7 +39,7 @@ export function TodoPage({ dependencies, mcpDependencies }: TodoPageProps) {
     changeViewMode,
   } = useTodos(dependencies)
 
-  const completedCount = todos.filter((todo) => todo.completed).length
+  const doneCount = todos.filter((todo) => todo.status === 'done').length
   const isMindmap = viewMode === 'mindmap'
 
   return (
@@ -53,7 +53,7 @@ export function TodoPage({ dependencies, mcpDependencies }: TodoPageProps) {
             <p className="todo-header__eyebrow">TASKS</p>
             <h1 id="todo-heading">Todo</h1>
           </div>
-          <p className="todo-header__count">{completedCount} / {todos.length} 完了</p>
+          <p className="todo-header__count">{doneCount} / {todos.length} 完了</p>
         </header>
 
         <div className="todo-view-switch" role="tablist" aria-label="表示の切り替え">

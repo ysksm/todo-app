@@ -20,7 +20,7 @@ describe('CreateTodo', () => {
         id: 1,
         title: 'Buy milk',
         description: '',
-        completed: false,
+        status: 'todo',
         type: 'product',
         parentId: null,
         position: 0,
@@ -31,7 +31,7 @@ describe('CreateTodo', () => {
     await useCase.execute({
       title: '  Buy milk  ',
       description: '  ',
-      completed: false,
+      status: 'todo',
       type: 'product',
       parentId: null,
     })
@@ -39,7 +39,7 @@ describe('CreateTodo', () => {
     expect(repository.create).toHaveBeenCalledWith({
       title: 'Buy milk',
       description: '',
-      completed: false,
+      status: 'todo',
       type: 'product',
       parentId: null,
     })
@@ -51,7 +51,7 @@ describe('CreateTodo', () => {
         id: 2,
         title: 'Child',
         description: '',
-        completed: false,
+        status: 'todo',
         type: 'epic',
         parentId: 1,
         position: 0,
@@ -62,7 +62,7 @@ describe('CreateTodo', () => {
     await useCase.execute({
       title: 'Child',
       description: '',
-      completed: false,
+      status: 'todo',
       type: 'epic',
       parentId: 1,
     })
@@ -77,7 +77,7 @@ describe('CreateTodo', () => {
     const useCase = new CreateTodo(repository)
 
     await expect(
-      useCase.execute({ title: '   ', description: '', completed: false, type: 'task', parentId: null }),
+      useCase.execute({ title: '   ', description: '', status: 'todo', type: 'task', parentId: null }),
     ).rejects.toThrow('Title is required')
 
     expect(repository.create).not.toHaveBeenCalled()

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { TODO_STATUS_LABELS } from '../../../domain/entities/todo-status'
 import { TODO_TYPE_LABELS } from '../../../domain/entities/todo-type'
 import type { TodoNode } from '../../../domain/entities/todo-tree'
 import { NODE_HEIGHT, NODE_WIDTH, type NodePosition } from '../../hooks/use-mindmap-layout'
@@ -12,7 +13,7 @@ interface MindmapNodeProps {
   isSaving: boolean
   onFocus(id: number): void
   onToggleCollapse(id: number): void
-  onToggleCompleted(node: TodoNode): void
+  onCycleStatus(node: TodoNode): void
   onStartEditing(id: number): void
   onCommitEditing(title: string): void
   onCancelEditing(): void
@@ -27,7 +28,7 @@ export function MindmapNode({
   isSaving,
   onFocus,
   onToggleCollapse,
-  onToggleCompleted,
+  onCycleStatus,
   onStartEditing,
   onCommitEditing,
   onCancelEditing,
@@ -38,7 +39,7 @@ export function MindmapNode({
   const className = [
     'mindmap-node',
     isFocused && 'mindmap-node--focused',
-    todo.completed && 'mindmap-node--completed',
+    `mindmap-node--${todo.status}`,
     isEditing && 'mindmap-node--editing',
   ]
     .filter(Boolean)
@@ -92,16 +93,16 @@ export function MindmapNode({
         </>
       ) : (
         <>
-          <input
-            type="checkbox"
-            className="mindmap-node__checkbox"
+          <button
+            type="button"
+            className={`mindmap-node__status mindmap-node__status--${todo.status}`}
             tabIndex={-1}
-            checked={todo.completed}
             disabled={isSaving}
-            aria-label={`${todo.title} を完了にする`}
-            onClick={(event) => event.stopPropagation()}
-            onChange={() => onToggleCompleted(node)}
-          />
+            aria-label={`${todo.title} の状態を切り替える（現在: ${TODO_STATUS_LABELS[todo.status]}）`}
+            onClick={(event) => stopAndRun(event, () => onCycleStatus(node))}
+          >
+            {TODO_STATUS_LABELS[todo.status]}
+          </button>
           <span className={`mindmap-node__type mindmap-node__type--${todo.type}`}>
             {TODO_TYPE_LABELS[todo.type]}
           </span>
