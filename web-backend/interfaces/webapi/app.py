@@ -13,7 +13,7 @@ from core.services.todo_service import TodoService
 from interfaces.mcp.auth import ApiKeyMiddleware
 from interfaces.mcp.config import McpSettings, load_mcp_settings
 from interfaces.mcp.server import create_mcp_server
-from interfaces.webapi import todos
+from interfaces.webapi import events, todos
 from interfaces.webapi.dependencies import STATE_ATTRIBUTE
 from interfaces.webapi.error_handlers import register_error_handlers
 from interfaces.webapi.mcp_info import create_mcp_info_router
@@ -52,6 +52,8 @@ def create_app(
     app = FastAPI(title="TODO API", lifespan=lifespan)
     setattr(app.state, STATE_ATTRIBUTE, service)
     register_error_handlers(app)
+    # "/api/todos/events" が "/api/todos/{todo_id}" に食われないよう、先に登録する。
+    app.include_router(events.router)
     app.include_router(todos.router)
     app.include_router(create_mcp_info_router(settings))
 

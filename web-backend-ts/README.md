@@ -54,7 +54,7 @@ scripts/embed-assets.mjs   dist/ を TypeScript に変換するジェネレー�
 src/assets.generated.ts    生成物（git 管理外）。アセットの base64 とメタデータ
 src/static.ts              静的コンテンツ配信
 src/main.ts                エントリポイント。API ルーティング
-test/smoke.sh              バイナリに対する総合テスト（67 項目）
+test/smoke.sh              バイナリに対する総合テスト（72 項目）
 ```
 
 ## バイナリ埋め込みの仕組み
@@ -99,6 +99,7 @@ Python 版と同じインターフェースです。
 | --- | --- | --- |
 | GET | `/api/todos` | TODO 一覧取得 |
 | POST | `/api/todos` | TODO 作成 |
+| GET | `/api/todos/events` | 変更通知の SSE ストリーム |
 
 リクエストボディ（`description` と `completed` は省略可能。pydantic のデフォルトと同じ挙動）:
 
@@ -109,6 +110,24 @@ Python 版と同じインターフェースです。
 不正なボディは `422`、`/api/*` の未定義パスは JSON の `404`、未対応メソッドは `405` を返します。
 `/api/*` は静的ハンドラより先に処理されるので、SPA フォールバックに飲み込まれることはありません。
 TODO はプロセスのメモリ上にのみ保持されます（Python 版と同じく再起動で消えます）。
+
+### 変更通知（SSE）
+
+Python 版と同じく、TODO が作られると `GET /api/todos/events` に `todos_changed` が流れます。
+
+```
+event: todos_changed
+data: {"action":"created","ids":[5]}
+```
+
+ペイロードは合図にすぎず、クライアントは受信したら `GET /api/todos` を取り直す想定です。
+待機中は 15 秒ごとに `: keep-alive` コメントを送ります。
+
+実装は Python 版（購読者リストへの push）と異なり、**変更カウンタ方式**です。
+scriptc では `ServerResponse` を配列や Map に保持できないため（下表参照）、各 SSE 接続が
+自分のクロージャ内の `setInterval`（250ms）でグローバルなカウンタを監視し、増えていたら
+イベントを書き出します。250ms 間に複数の変更が起きた場合は最後の 1 件に合流しますが、
+クライアントは全件取り直すので問題になりません。
 
 ## 静的コンテンツ配信の仕様
 
@@ -130,13 +149,14 @@ TODO はプロセスのメモリ上にのみ保持されます（Python 版と�
 ## 動作確認
 
 ```bash
-npm test          # bin/todo-api を起動して 67 項目を検証し、終了時に停止する
+npm test          # bin/todo-api を起動して 72 項目を検証し、終了時に停止する
 ./test/smoke.sh --no-start   # すでに起動済みのサーバに対して実行
 ```
 
 検証内容は、配信データの SHA-256 が元ファイルと一致すること、Content-Length / HEAD、
 gzip ネゴシエーション（`gzip;q=0` や `*` を含む 8 パターン）、ETag と 304、キャッシュ制御、
-SPA フォールバックとパストラバーサル、API の各ステータスです。
+SPA フォールバックとパストラバーサル、API の各ステータス、SSE 変更通知
+（購読中の POST で `todos_changed` が届くこと）です。
 
 ポートが使用中の場合はメッセージを出して終了コード 1 で止まります。
 
@@ -158,8 +178,9 @@ scriptc は TypeScript の静的な部分集合しか受け付けません。実
 | `Uint8Array.from` が未対応（SC2020） | `%XX` の復号は `Buffer.from(hex, "hex")` で行う |
 | `zlib` は `deflateSync` / `inflateSync` のみ（`gzipSync` は未対応） | gzip はビルド時（Node 側）に作って埋め込む |
 | `if (v)` は空文字を弾いてしまう | `Map.get` の結果は `if (v === undefined)` で判定 |
+| `ServerResponse[]` / `Map<number, ServerResponse>` は不可（SC2009 / SC2020） | SSE は購読者リストを持たず、変更カウンタを接続ごとの `setInterval` で監視して配信 |
 
-`npm run coverage` は現状 **231/231 statements = 100% 静的**で、動的エンジン（`--dynamic`）へのフォールバックはありません。
+`npm run coverage` は現状 **260/260 statements = 100% 静的**で、動的エンジン（`--dynamic`）へのフォールバックはありません。
 
 ## 制限
 

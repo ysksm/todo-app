@@ -49,6 +49,23 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
     void reload()
   }, [reload])
 
+  /** 通知起点の再取得。ローディング表示を出さずに静かに置き換える。 */
+  const refresh = useCallback(async () => {
+    try {
+      const todos = await dependencies.listTodos.execute()
+      dispatch(todoActions.requestSucceeded(todos))
+    } catch {
+      // 失敗しても次の通知か自分の操作で追いつくので、エラー表示はしない。
+    }
+  }, [dependencies, dispatch])
+
+  // サーバー側の変更（他クライアントや MCP 経由）を受けて一覧を取り直す。
+  useEffect(() => {
+    return dependencies.subscribeToChanges(() => {
+      void refresh()
+    })
+  }, [dependencies, refresh])
+
   /** 変更を保存して一覧を取り直す。失敗したら null を返す。 */
   const runMutation = useCallback(
     async <T,>(operation: () => Promise<T>): Promise<T | null> => {

@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { Provider } from 'react-redux'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -26,6 +26,7 @@ function createDependencies(overrides: Partial<Record<string, unknown>> = {}) {
     updateTodo: { execute: vi.fn().mockResolvedValue(todo(1, null)) },
     moveTodo: { execute: vi.fn().mockResolvedValue(todo(1, null)) },
     deleteTodo: { execute: vi.fn().mockResolvedValue(undefined) },
+    subscribeToChanges: vi.fn().mockReturnValue(vi.fn()),
     ...overrides,
   } as unknown as TodoDependencies
 }
@@ -90,6 +91,42 @@ describe('useTodos remove', () => {
 
     await expect(result.current.remove(4)).resolves.toBe(false)
     await waitFor(() => expect(result.current.error).not.toBeNull())
+  })
+})
+
+describe('useTodos change notifications', () => {
+  function listCalls(dependencies: TodoDependencies): number {
+    return (dependencies.listTodos.execute as ReturnType<typeof vi.fn>).mock.calls.length
+  }
+
+  it('refetches the list when a server-side change arrives', async () => {
+    let notify: () => void = () => {}
+    const dependencies = createDependencies({
+      subscribeToChanges: vi.fn((onChange: () => void) => {
+        notify = onChange
+        return vi.fn()
+      }),
+    })
+    const { result } = await renderUseTodos(dependencies)
+    const callsBefore = listCalls(dependencies)
+
+    act(() => notify())
+
+    await waitFor(() => expect(listCalls(dependencies)).toBeGreaterThan(callsBefore))
+    // 静かな再取得なのでローディング表示は出ない。
+    expect(result.current.isLoading).toBe(false)
+  })
+
+  it('unsubscribes on unmount', async () => {
+    const unsubscribe = vi.fn()
+    const dependencies = createDependencies({
+      subscribeToChanges: vi.fn().mockReturnValue(unsubscribe),
+    })
+    const { unmount } = await renderUseTodos(dependencies)
+
+    unmount()
+
+    expect(unsubscribe).toHaveBeenCalled()
   })
 })
 

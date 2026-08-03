@@ -54,6 +54,21 @@ PORT=3000 ./start.sh
 | `PUT` | `/api/todos/{id}` | `TodoUpdate` | `Todo` |
 | `PATCH` | `/api/todos/{id}/move` | `TodoMove` | `Todo` |
 | `DELETE` | `/api/todos/{id}` | — | `204` |
+| `GET` | `/api/todos/events` | — | SSE (`text/event-stream`) |
+
+### Change notifications (SSE)
+
+`GET /api/todos/events` streams a `todos_changed` event whenever a todo is
+created, updated, moved, or deleted — through the Web API or MCP alike:
+
+```
+event: todos_changed
+data: {"action": "created", "ids": [5]}
+```
+
+The payload is only a hint; clients are expected to refetch `GET /api/todos`
+when an event arrives. A `: keep-alive` comment is sent every 15 seconds while
+idle.
 
 A todo has at most one parent (`parent_id`) and keeps a `position` among its
 siblings. Todos without a parent are roots, and there can be more than one.

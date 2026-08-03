@@ -196,3 +196,5 @@ def test_delete_missing_todo_returns_404(client: TestClient) -> None:
     response = client.delete("/api/todos/999")
 
     assert response.status_code == 404
+
+

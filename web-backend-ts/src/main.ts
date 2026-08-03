@@ -21,6 +21,47 @@ type Todo = {
 const todos = new Map<number, Todo>();
 let nextId = 1;
 
+// SSE の変更通知。scriptc は ServerResponse を配列や Map に保持できないため、
+// 購読者リストは持たず、変更カウンタを各接続が自分のタイマーで監視する。
+const SSE_POLL_MS = 250;
+const SSE_KEEP_ALIVE_TICKS = 60; // 250ms x 60 = 15 秒ごとに keep-alive
+let changeVersion = 0;
+let lastEventData = "";
+
+function publishChange(action: string, id: number): void {
+  lastEventData = `{"action":"${action}","ids":[${id}]}`;
+  changeVersion += 1;
+}
+
+// GET /api/todos/events。接続を開いたままにして todos_changed を流し続ける。
+function handleEvents(req: IncomingMessage, res: ServerResponse): void {
+  res.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+  });
+  res.write(": connected\n\n");
+
+  let seenVersion = changeVersion;
+  let idleTicks = 0;
+  const timer = setInterval(() => {
+    if (changeVersion !== seenVersion) {
+      seenVersion = changeVersion;
+      idleTicks = 0;
+      res.write(`event: todos_changed\ndata: ${lastEventData}\n\n`);
+      return;
+    }
+    idleTicks += 1;
+    if (idleTicks >= SSE_KEEP_ALIVE_TICKS) {
+      idleTicks = 0;
+      res.write(": keep-alive\n\n");
+    }
+  }, SSE_POLL_MS);
+
+  req.on("close", () => {
+    clearInterval(timer);
+  });
+}
+
 function listTodos(): Todo[] {
   const result: Todo[] = [];
   for (const todo of todos.values()) {
@@ -74,6 +115,14 @@ function sendJson(res: ServerResponse, status: number, payload: string): void {
 
 // API ルーター。処理したら true を返す。
 function handleApi(req: IncomingMessage, res: ServerResponse, path: string, body: string): boolean {
+  if (path === "/api/todos/events") {
+    if (req.method === "GET") {
+      handleEvents(req, res);
+      return true;
+    }
+    sendJson(res, 405, '{"detail":"Method Not Allowed"}');
+    return true;
+  }
   if (path === "/api/todos") {
     const method = req.method;
     if (method === "GET") {
@@ -83,6 +132,7 @@ function handleApi(req: IncomingMessage, res: ServerResponse, path: string, body
     if (method === "POST") {
       try {
         const todo = createTodo(parseTodoCreate(body));
+        publishChange("created", todo.id);
         sendJson(res, 200, JSON.stringify(todo));
       } catch (error) {
         sendJson(res, 422, '{"detail":"Invalid request body"}');
