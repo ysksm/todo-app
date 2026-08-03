@@ -6,6 +6,9 @@
 - `web-backend/` — 全機能を持つ `core/` と、それを外へ出す `interfaces/`（webapi / mcp / cli）
 - `web-frontend/` — React 19 + Redux Toolkit + Vite の SPA
 
+変更はサーバーから SSE（`GET /api/todos/events`）で通知され、開いている
+クライアントは自動で一覧を取り直す。Web API 経由でも MCP 経由でも同じ通知が流れる。
+
 ## 起動
 
 フロントエンドをビルドしてバックエンドから配信する:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 from core.errors import TodoNotFoundError
+from core.events import TodoEvent, TodoEventBroker
 from core.models.todo import Todo, TodoCreate, TodoMove, TodoUpdate
 from core.repositories.todo_repository import TodoRepository
 
@@ -12,10 +13,14 @@ class TodoService:
 
     見つからなかった場合に None を返す代わりに TodoNotFoundError を送出するので、
     どのインターフェースからでも同じ失敗の扱いになる。
+
+    変更が成功するたびに events へ発行する。ここで発行することで、
+    Web API と MCP のどちら経由の変更でも同じ通知が流れる。
     """
 
-    def __init__(self, repository: TodoRepository) -> None:
+    def __init__(self, repository: TodoRepository, events: TodoEventBroker | None = None) -> None:
         self.repository = repository
+        self.events = events or TodoEventBroker()
 
     def list_todos(self) -> list[Todo]:
         """深さ優先・position 昇順で全件返す。"""
@@ -32,7 +37,9 @@ class TodoService:
 
         種類の上下関係に反する親子は InvalidHierarchyError。
         """
-        return self.repository.create(todo_create)
+        todo = self.repository.create(todo_create)
+        self.events.publish(TodoEvent(action="created", ids=(todo.id,)))
+        return todo
 
     def update_todo(self, todo_id: int, todo_update: TodoUpdate) -> Todo:
         """本文と種類を更新する。親子関係と並び順は保持される。
@@ -42,6 +49,7 @@ class TodoService:
         todo = self.repository.update(todo_id, todo_update)
         if todo is None:
             raise TodoNotFoundError(todo_id)
+        self.events.publish(TodoEvent(action="updated", ids=(todo.id,)))
         return todo
 
     def move_todo(self, todo_id: int, todo_move: TodoMove) -> Todo:
@@ -52,6 +60,7 @@ class TodoService:
         todo = self.repository.move(todo_id, todo_move)
         if todo is None:
             raise TodoNotFoundError(todo_id)
+        self.events.publish(TodoEvent(action="moved", ids=(todo.id,)))
         return todo
 
     def delete_todo(self, todo_id: int) -> list[int]:
@@ -59,6 +68,7 @@ class TodoService:
         removed_ids = self.repository.delete(todo_id)
         if not removed_ids:
             raise TodoNotFoundError(todo_id)
+        self.events.publish(TodoEvent(action="deleted", ids=tuple(removed_ids)))
         return removed_ids
 
     def render_tree(self) -> str:

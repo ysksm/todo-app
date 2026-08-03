@@ -126,6 +126,21 @@ check "/api は SPA に落ちない"        "application/json" "$(hdr content-ty
 check "作成した TODO が一覧に出る"    "yes" "$(curl -s $BASE/api/todos | grep -q '"title":"t1"' && echo yes || echo no)"
 check "UTF-8 の TODO"                "yes" "$(curl -s -X POST -H 'Content-Type: application/json' -d '{"title":"買い物","description":"牛乳","completed":false}' $BASE/api/todos | grep -q '"title":"買い物"' && echo yes || echo no)"
 
+echo "== SSE 変更通知 =="
+check "GET /api/todos/events type"  "text/event-stream" \
+  "$(curl -s -N --max-time 1 -D - -o /dev/null "$BASE/api/todos/events" | tr -d '\r' | grep -i '^content-type:' | head -1 | sed 's/^[^:]*: *//I')"
+check "DELETE events -> 405"        405 "$(code -X DELETE $BASE/api/todos/events)"
+sse_out=$(mktemp)
+curl -s -N --max-time 3 "$BASE/api/todos/events" > "$sse_out" &
+sse_pid=$!
+sleep 0.5
+curl -s -X POST -H 'Content-Type: application/json' -d '{"title":"sse"}' "$BASE/api/todos" > /dev/null
+wait "$sse_pid"
+check "接続直後のコメント"            "yes" "$(grep -q '^: connected' "$sse_out" && echo yes || echo no)"
+check "todos_changed が届く"         "yes" "$(grep -q '^event: todos_changed' "$sse_out" && echo yes || echo no)"
+check "action は created"            "yes" "$(grep -q '"action":"created"' "$sse_out" && echo yes || echo no)"
+rm -f "$sse_out"
+
 echo
 echo "pass=$pass fail=$fail"
 [ "$fail" -eq 0 ]

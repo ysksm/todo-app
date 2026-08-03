@@ -1,4 +1,5 @@
 import type { HttpClient } from '@/shared/infrastructure/http/http-client'
+import type { SubscribeToTodoChanges } from '../application/subscribe-to-todo-changes'
 import { CreateTodo } from '../application/use-cases/create-todo'
 import { DeleteTodo } from '../application/use-cases/delete-todo'
 import { ListTodos } from '../application/use-cases/list-todos'
@@ -7,7 +8,10 @@ import { UpdateTodo } from '../application/use-cases/update-todo'
 import { HttpTodoRepository } from '../infrastructure/repositories/http-todo-repository'
 import type { TodoDependencies } from './todo-dependencies'
 
-export function createTodoDependencies(httpClient: HttpClient): TodoDependencies {
+export function createTodoDependencies(
+  httpClient: HttpClient,
+  subscribeToChanges: SubscribeToTodoChanges,
+): TodoDependencies {
   const repository = new HttpTodoRepository(httpClient)
 
   return {
@@ -16,5 +20,6 @@ export function createTodoDependencies(httpClient: HttpClient): TodoDependencies
     updateTodo: new UpdateTodo(repository),
     moveTodo: new MoveTodo(repository),
     deleteTodo: new DeleteTodo(repository),
+    subscribeToChanges,
   }
 }
