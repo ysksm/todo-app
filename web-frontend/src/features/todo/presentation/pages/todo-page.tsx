@@ -7,12 +7,14 @@ import {
   type TodoStatus,
 } from '../../domain/entities/todo-status'
 import type { TodoViewMode } from '../store/todo-slice'
+import { KanbanView } from '../components/kanban/kanban-view'
 import { MindmapView } from '../components/mindmap/mindmap-view'
 import { TodoForm } from '../components/todo-form'
 import { TodoDialog } from '../components/todo-dialog'
 import { TodoList } from '../components/todo-list'
 import { useTodos } from '../hooks/use-todos'
 import '../todo.css'
+import '../kanban.css'
 import '../mindmap.css'
 
 interface TodoPageProps {
@@ -22,6 +24,7 @@ interface TodoPageProps {
 
 const VIEW_MODES: readonly { mode: TodoViewMode; label: string }[] = [
   { mode: 'list', label: 'リスト' },
+  { mode: 'kanban', label: 'カンバン' },
   { mode: 'mindmap', label: 'マインドマップ' },
 ]
 
@@ -53,11 +56,12 @@ export function TodoPage({ dependencies, mcpDependencies }: TodoPageProps) {
 
   const doneCount = todos.filter((todo) => todo.status === 'done').length
   const isMindmap = viewMode === 'mindmap'
+  const isWide = viewMode === 'mindmap' || viewMode === 'kanban'
 
   return (
     <main className="todo-page">
       <section
-        className={`todo-workspace${isMindmap ? ' todo-workspace--wide' : ''}`}
+        className={`todo-workspace${isWide ? ' todo-workspace--wide' : ''}`}
         aria-labelledby="todo-heading"
       >
         <header className="todo-header">
@@ -85,7 +89,7 @@ export function TodoPage({ dependencies, mcpDependencies }: TodoPageProps) {
 
         {!isMindmap && <TodoForm isSaving={isSaving} onCreate={create} />}
 
-        {!isMindmap && (
+        {viewMode === 'list' && (
           <div className="todo-filter" role="group" aria-label="状態で絞り込み">
             <span className="todo-filter__label">状態:</span>
             {STATUS_FILTERS.map(({ status, label }) => (
@@ -114,6 +118,8 @@ export function TodoPage({ dependencies, mcpDependencies }: TodoPageProps) {
             onMove={move}
             onDelete={remove}
           />
+        ) : viewMode === 'kanban' ? (
+          <KanbanView todos={todos} isSaving={isSaving} onUpdate={update} onOpen={openDialog} />
         ) : (
           <TodoList
             todos={todos}

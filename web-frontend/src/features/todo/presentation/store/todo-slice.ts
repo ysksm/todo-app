@@ -5,7 +5,7 @@ import type { TodoType } from '../../domain/entities/todo-type'
 
 type TodoRequestStatus = 'idle' | 'loading' | 'saving'
 
-export type TodoViewMode = 'list' | 'mindmap'
+export type TodoViewMode = 'list' | 'kanban' | 'mindmap'
 
 /** まだ保存されていない新規ノードの仮 id。実 id と衝突しないよう負の値を使う。 */
 export const DRAFT_TODO_ID = -1
