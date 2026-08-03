@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { Todo } from '../../domain/entities/todo'
+import type { TodoStatus } from '../../domain/entities/todo-status'
 import type { TodoType } from '../../domain/entities/todo-type'
 
 type TodoRequestStatus = 'idle' | 'loading' | 'saving'
@@ -23,6 +24,8 @@ export interface TodoStoreState {
   error: string | null
   selectedTodoId: number | null
   viewMode: TodoViewMode
+  /** null なら全状態を表示する。 */
+  statusFilter: TodoStatus | null
   focusedTodoId: number | null
   editingTodoId: number | null
   collapsedIds: number[]
@@ -39,6 +42,7 @@ const initialState: TodoStoreState = {
   error: null,
   selectedTodoId: null,
   viewMode: 'list',
+  statusFilter: null,
   focusedTodoId: null,
   editingTodoId: null,
   collapsedIds: [],
@@ -94,6 +98,9 @@ const todoSlice = createSlice({
       state.viewMode = action.payload
       state.editingTodoId = null
       state.draftNode = null
+    },
+    statusFilterChanged(state, action: PayloadAction<TodoStatus | null>) {
+      state.statusFilter = action.payload
     },
     focusMoved(state, action: PayloadAction<number | null>) {
       state.focusedTodoId = action.payload

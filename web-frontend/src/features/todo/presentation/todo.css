@@ -192,6 +192,36 @@
   font-weight: 600;
 }
 
+.todo-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.todo-filter__label {
+  color: #33483b;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.todo-filter__chip {
+  padding: 4px 12px;
+  border: 1px solid #bdc9c1;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #496053;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.todo-filter__chip--active {
+  border-color: #2f694c;
+  background: #2f694c;
+  color: #ffffff;
+  font-weight: 600;
+}
+
 .todo-list {
   display: grid;
   gap: 8px;

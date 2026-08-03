@@ -91,6 +91,14 @@ describe('todoReducer', () => {
     expect(state.editingTodoId).toBe(DRAFT_TODO_ID)
   })
 
+  it('stores the status filter', () => {
+    const filtered = todoReducer(undefined, todoActions.statusFilterChanged('doing'))
+    expect(filtered.statusFilter).toBe('doing')
+
+    const cleared = todoReducer(filtered, todoActions.statusFilterChanged(null))
+    expect(cleared.statusFilter).toBeNull()
+  })
+
   it('leaves editing when the view mode changes', () => {
     const state = todoReducer(
       todoReducer(undefined, todoActions.editingStarted(1)),

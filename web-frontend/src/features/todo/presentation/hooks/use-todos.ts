@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { Todo, TodoDraft, TodoMove, TodoUpdate } from '../../domain/entities/todo'
+import type { TodoStatus } from '../../domain/entities/todo-status'
 import type { TodoType } from '../../domain/entities/todo-type'
 import type { TodoDependencies } from '../../di/todo-dependencies'
 import { confirmCascadingDelete } from '../confirm-cascading-delete'
@@ -18,6 +19,7 @@ interface TodoState {
   error: string | null
   selectedTodo: Todo | null
   viewMode: TodoViewMode
+  statusFilter: TodoStatus | null
   reload(): Promise<void>
   create(title: string, type: TodoType): Promise<boolean>
   createTodo(draft: TodoDraft): Promise<Todo | null>
@@ -28,11 +30,12 @@ interface TodoState {
   openDialog(id: number): void
   closeDialog(): void
   changeViewMode(mode: TodoViewMode): void
+  changeStatusFilter(status: TodoStatus | null): void
 }
 
 export function useTodos(dependencies: TodoDependencies): TodoState {
   const dispatch = useDispatch()
-  const { todos, status, error, viewMode } = useSelector(selectTodoState)
+  const { todos, status, error, viewMode, statusFilter } = useSelector(selectTodoState)
   const selectedTodo = useSelector(selectSelectedTodo)
 
   const reload = useCallback(async () => {
@@ -156,6 +159,13 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
     [dispatch],
   )
 
+  const changeStatusFilter = useCallback(
+    (statusFilter: TodoStatus | null) => {
+      dispatch(todoActions.statusFilterChanged(statusFilter))
+    },
+    [dispatch],
+  )
+
   return {
     todos,
     isLoading: status === 'loading',
@@ -163,6 +173,7 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
     error,
     selectedTodo,
     viewMode,
+    statusFilter,
     reload,
     create,
     createTodo,
@@ -173,5 +184,6 @@ export function useTodos(dependencies: TodoDependencies): TodoState {
     openDialog,
     closeDialog,
     changeViewMode,
+    changeStatusFilter,
   }
 }
