@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
-from mcp.server.transport_security import TransportSecuritySettings
+from mcp.server import MCPServer
 
 from core.models.todo import TodoCreate, TodoMove, TodoUpdate
 from core.models.todo_status import TodoStatus
@@ -31,28 +29,13 @@ INSTRUCTIONS = """\
 def create_mcp_server(
     service: TodoService,
     name: str = "todo-app",
-    allowed_hosts: Sequence[str] = (),
-) -> FastMCP:
+) -> MCPServer:
     """core の全機能を MCP ツールとして公開する。
 
-    HTTP へ載せる前提なので stateless_http=True にし、パスは mount 側で決める。
-    allowed_hosts を渡すと DNS リバインディング対策の許可ホストを差し替える
-    （既定では SDK が localhost 系だけを許可する）。
+    HTTP への載せ方（stateless_http、パス、DNS リバインディング対策）は
+    streamable_http_app() を呼ぶ側（webapi/app.py）が決める。
     """
-    mcp = FastMCP(
-        name,
-        instructions=INSTRUCTIONS,
-        stateless_http=True,
-        streamable_http_path="/",
-        transport_security=(
-            TransportSecuritySettings(
-                allowed_hosts=list(allowed_hosts),
-                allowed_origins=list(allowed_hosts),
-            )
-            if allowed_hosts
-            else None
-        ),
-    )
+    mcp = MCPServer(name, instructions=INSTRUCTIONS)
 
     @mcp.tool()
     def list_todos(status: TodoStatus | None = None) -> list[dict[str, Any]]:

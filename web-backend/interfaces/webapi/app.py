@@ -8,6 +8,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import RedirectResponse
 from starlette.routing import Route
 
+from mcp.server.transport_security import TransportSecuritySettings
+
 from core.repositories.todo_repository import TodoRepository
 from core.services.todo_service import TodoService
 from interfaces.mcp.auth import ApiKeyMiddleware
@@ -34,14 +36,23 @@ def create_app(
     settings = mcp_settings or load_mcp_settings()
     service = todo_service or TodoService(TodoRepository())
 
-    mcp_server = create_mcp_server(
-        service,
-        name=settings.server_name,
-        allowed_hosts=settings.allowed_hosts,
-    )
+    mcp_server = create_mcp_server(service, name=settings.server_name)
     # session_manager は streamable_http_app() の初回呼び出しで作られるので、
     # lifespan で使う前にここで組み立てておく。
-    mcp_asgi_app = mcp_server.streamable_http_app()
+    # allowed_hosts を渡すと DNS リバインディング対策の許可ホストを差し替える
+    # （未指定なら SDK が localhost 系だけを許可する）。
+    mcp_asgi_app = mcp_server.streamable_http_app(
+        streamable_http_path="/",
+        stateless_http=True,
+        transport_security=(
+            TransportSecuritySettings(
+                allowed_hosts=list(settings.allowed_hosts),
+                allowed_origins=list(settings.allowed_hosts),
+            )
+            if settings.allowed_hosts
+            else None
+        ),
+    )
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):

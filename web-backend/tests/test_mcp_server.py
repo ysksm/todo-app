@@ -29,8 +29,11 @@ def mcp_server(service: TodoService):
 
 def call_tool(mcp_server, name: str, **arguments: Any) -> Any:
     result = asyncio.run(mcp_server.call_tool(name, arguments))
-    # FastMCP は (コンテンツ, 構造化された結果) を返す。後者だけ使う。
-    structured = result[1] if isinstance(result, tuple) else result
+    # SDK 2.0 は CallToolResult を返す。失敗はテキストを添えて is_error になる。
+    if result.is_error:
+        message = "".join(getattr(content, "text", "") for content in result.content)
+        raise RuntimeError(message)
+    structured = result.structured_content
     return structured.get("result", structured) if isinstance(structured, dict) else structured
 
 
