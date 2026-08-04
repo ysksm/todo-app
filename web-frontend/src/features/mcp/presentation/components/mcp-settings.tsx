@@ -39,6 +39,14 @@ export function McpSettings({ dependencies }: McpSettingsProps) {
             </div>
           </dl>
 
+          {connection.apiKey && (
+            <CopyableCommand
+              label="MCP API キー（認可画面で入力するキー）"
+              value={connection.apiKey}
+              secret={connection.apiKey}
+            />
+          )}
+
           <section className="mcp-client" aria-labelledby="mcp-client-claude-code">
             <h3 id="mcp-client-claude-code">Claude Code</h3>
             <p>ターミナルで次のコマンドを実行します。</p>
@@ -53,13 +61,9 @@ export function McpSettings({ dependencies }: McpSettingsProps) {
             <h3 id="mcp-client-claude-app">Claude アプリ</h3>
             <ol className="mcp-client__steps">
               <li>設定 → コネクタ → 「カスタムコネクタを追加」で下の URL を登録する</li>
-              <li>接続時に開く認可画面で MCP API キーを入力し「許可する」を押す</li>
+              <li>接続時に開く認可画面で上の MCP API キーを入力し「許可する」を押す</li>
             </ol>
-            <CopyableCommand
-              label="カスタムコネクタ用 URL"
-              value={connection.connectorUrl}
-              secret={connection.apiKey}
-            />
+            <CopyableCommand label="カスタムコネクタ用 URL" value={connection.connectorUrl} />
           </section>
 
           <section className="mcp-client" aria-labelledby="mcp-client-chatgpt">
@@ -67,13 +71,9 @@ export function McpSettings({ dependencies }: McpSettingsProps) {
             <ol className="mcp-client__steps">
               <li>設定 → コネクタ → 詳細設定で「開発者モード」を有効にする</li>
               <li>「コネクタを作成」で下の URL を MCP サーバー URL として登録する（認証は「OAuth」を選択）</li>
-              <li>接続時に開く認可画面で MCP API キーを入力し「許可する」を押す</li>
+              <li>接続時に開く認可画面で上の MCP API キーを入力し「許可する」を押す</li>
             </ol>
-            <CopyableCommand
-              label="コネクタ用 URL"
-              value={connection.connectorUrl}
-              secret={connection.apiKey}
-            />
+            <CopyableCommand label="コネクタ用 URL" value={connection.connectorUrl} />
           </section>
 
           <section className="mcp-client" aria-labelledby="mcp-client-codex">

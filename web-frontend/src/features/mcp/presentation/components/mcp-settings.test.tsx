@@ -73,6 +73,23 @@ describe('McpSettings', () => {
     )
   })
 
+  it('shows the api key needed for the consent screen', async () => {
+    renderSettings()
+
+    await waitFor(() =>
+      expect(screen.getByText('MCP API キー（認可画面で入力するキー）')).toBeInTheDocument(),
+    )
+  })
+
+  it('hides the api key row for remote clients', async () => {
+    renderSettings({ ...LOCAL_CONNECTION, apiKey: null, isLocalRequest: false, note: 'note' })
+
+    await waitFor(() => expect(screen.getByText('note')).toBeInTheDocument())
+    expect(
+      screen.queryByText('MCP API キー（認可画面で入力するキー）'),
+    ).not.toBeInTheDocument()
+  })
+
   it('masks the api key until it is revealed', async () => {
     renderSettings()
     await waitFor(() =>
