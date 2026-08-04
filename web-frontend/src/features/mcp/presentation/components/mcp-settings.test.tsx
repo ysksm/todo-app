@@ -19,6 +19,7 @@ const LOCAL_CONNECTION: McpConnection = {
   codexConfig:
     '[mcp_servers.todo-app]\nurl = "http://127.0.0.1:8000/mcp"\nbearer_token_env_var = "TODO_APP_MCP_TOKEN"\n',
   codexEnvCommand: `launchctl setenv TODO_APP_MCP_TOKEN '${API_KEY}'\nexport TODO_APP_MCP_TOKEN='${API_KEY}'`,
+  persistEnvScript: `#!/bin/sh\nKEY='${API_KEY}'\necho persist\n`,
   note: null,
 }
 
@@ -189,6 +190,12 @@ describe('McpSettings', () => {
     await user.click(await screen.findByRole('button', { name: /環境変数を永続化/ }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('永続化に失敗しました')
+  })
+
+  it('offers a copyable script for other machines', async () => {
+    renderSettings()
+
+    expect(await screen.findByText('別のマシンで実行するスクリプト')).toBeInTheDocument()
   })
 
   it('hides the persist button for remote clients', async () => {

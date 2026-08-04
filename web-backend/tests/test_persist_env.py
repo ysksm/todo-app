@@ -93,6 +93,58 @@ def test_endpoint_persists_into_the_home_directory(
     assert f"export {ENV_VAR}='{TEST_API_KEY}'" in read_zshrc(tmp_path)
 
 
+class TestPersistEnvScript:
+    """UI からコピーする「別のマシンで実行するスクリプト」が実際に動くこと。"""
+
+    @pytest.fixture
+    def run_script(self, client: TestClient, tmp_path: Path):
+        script = client.get("/api/mcp/connection").json()["persist_env_script"]
+        script_file = tmp_path / "persist.sh"
+        script_file.write_text(script, encoding="utf-8")
+
+        # macOS 分岐（launchctl 実行）に入らないよう uname を偽装する
+        fake_bin = tmp_path / "bin"
+        fake_bin.mkdir()
+        fake_uname = fake_bin / "uname"
+        fake_uname.write_text("#!/bin/sh\necho Linux\n", encoding="utf-8")
+        fake_uname.chmod(0o755)
+
+        home = tmp_path / "home"
+        home.mkdir()
+
+        def run() -> "subprocess.CompletedProcess[str]":
+            import os
+            import subprocess
+
+            return subprocess.run(
+                ["/bin/sh", str(script_file)],
+                capture_output=True,
+                text=True,
+                env={"HOME": str(home), "PATH": f"{fake_bin}:{os.environ['PATH']}"},
+            )
+
+        return run, home
+
+    def test_writes_the_zshrc_block(self, run_script) -> None:
+        run, home = run_script
+
+        result = run()
+
+        assert result.returncode == 0, result.stderr
+        content = (home / ".zshrc").read_text(encoding="utf-8")
+        assert ZSHRC_BEGIN in content and ZSHRC_END in content
+        assert f"export TODO_APP_MCP_TOKEN='{TEST_API_KEY}'" in content
+
+    def test_running_twice_does_not_duplicate_the_block(self, run_script) -> None:
+        run, home = run_script
+
+        assert run().returncode == 0
+        assert run().returncode == 0
+
+        content = (home / ".zshrc").read_text(encoding="utf-8")
+        assert content.count(ZSHRC_BEGIN) == 1
+
+
 def test_endpoint_rejects_remote_clients(client: TestClient, monkeypatch) -> None:
     import interfaces.webapi.mcp_info as mcp_info_module
 

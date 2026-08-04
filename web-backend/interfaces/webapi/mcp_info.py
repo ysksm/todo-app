@@ -7,7 +7,12 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from interfaces.mcp.config import McpSettings
-from interfaces.mcp.persist_env import persist_env
+from interfaces.mcp.persist_env import (
+    LAUNCH_AGENT_LABEL,
+    ZSHRC_BEGIN,
+    ZSHRC_END,
+    persist_env,
+)
 
 KEY_PLACEHOLDER = "$MCP_API_KEY"
 
@@ -34,6 +39,12 @@ class McpConnection(BaseModel):
     """Codex 向けの ~/.codex/config.toml スニペット。キーは環境変数で渡す。"""
     codex_env_command: str
     """Codex がキーを読む環境変数を設定するコマンド。"""
+    persist_env_script: str
+    """別のマシンで永続化するためのシェルスクリプト。
+
+    「環境変数を永続化」ボタンと同じこと（~/.zshrc への追記・LaunchAgent 登録・
+    launchctl setenv の即時実行）を、実行したマシン上で行う。
+    """
     note: str | None
 
 
@@ -74,6 +85,7 @@ def create_mcp_info_router(settings: McpSettings) -> APIRouter:
             connector_url=url,
             codex_config=build_codex_config(settings.server_name, url),
             codex_env_command=build_codex_env_command(key),
+            persist_env_script=build_persist_env_script(key),
             note=None
             if is_local
             else "認証キーはローカルからの参照時のみ表示されます。"
@@ -135,6 +147,64 @@ def build_codex_env_command(api_key: str) -> str:
         f"launchctl setenv {CODEX_TOKEN_ENV_VAR} '{api_key}'\n"
         f"export {CODEX_TOKEN_ENV_VAR}='{api_key}'"
     )
+
+
+def build_persist_env_script(api_key: str) -> str:
+    """別のマシンで実行する永続化スクリプト。
+
+    「環境変数を永続化」ボタン（persist_env）と同じ内容を POSIX sh で行う:
+    ~/.zshrc のマーカーブロックを差し替え、macOS なら LaunchAgent を登録して
+    launchctl setenv を即時実行する。何度実行しても増殖しない。
+    """
+    return f"""#!/bin/sh
+# todo-app の MCP API キーをこのマシンに永続化する
+set -eu
+ENV_VAR="{CODEX_TOKEN_ENV_VAR}"
+KEY='{api_key}'
+ZSHRC="$HOME/.zshrc"
+BEGIN_MARK="{ZSHRC_BEGIN}"
+END_MARK="{ZSHRC_END}"
+
+# 既存のブロックを取り除いてから追記する（何度実行しても増えない）
+if [ -f "$ZSHRC" ]; then
+  awk -v b="$BEGIN_MARK" -v e="$END_MARK" '$0==b{{skip=1}} skip!=1{{print}} $0==e{{skip=0}}' \\
+    "$ZSHRC" > "$ZSHRC.tmp" && mv "$ZSHRC.tmp" "$ZSHRC"
+fi
+{{
+  echo "$BEGIN_MARK"
+  echo "export $ENV_VAR='$KEY'"
+  echo "$END_MARK"
+}} >> "$ZSHRC"
+echo "updated: $ZSHRC"
+
+if [ "$(uname)" = "Darwin" ]; then
+  AGENT="$HOME/Library/LaunchAgents/{LAUNCH_AGENT_LABEL}.plist"
+  mkdir -p "$(dirname "$AGENT")"
+  cat > "$AGENT" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>{LAUNCH_AGENT_LABEL}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/launchctl</string>
+    <string>setenv</string>
+    <string>$ENV_VAR</string>
+    <string>$KEY</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>
+PLIST
+  chmod 600 "$AGENT"
+  /bin/launchctl setenv "$ENV_VAR" "$KEY"
+  echo "registered: $AGENT"
+fi
+echo "done. 新しいターミナルを開き、Codex / ChatGPT アプリを再起動してください。"
+"""
 
 
 def build_client_config(server_name: str, url: str, api_key: str) -> str:

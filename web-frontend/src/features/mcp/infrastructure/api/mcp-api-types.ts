@@ -9,6 +9,7 @@ export interface McpConnectionResponse {
   connector_url: string
   codex_config: string
   codex_env_command: string
+  persist_env_script: string
   note: string | null
 }
 

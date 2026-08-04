@@ -44,6 +44,7 @@ function toMcpConnection(response: McpConnectionResponse): McpConnection {
     connectorUrl: response.connector_url,
     codexConfig: response.codex_config,
     codexEnvCommand: response.codex_env_command,
+    persistEnvScript: response.persist_env_script,
     note: response.note,
   }
 }

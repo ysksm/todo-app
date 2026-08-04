@@ -16,5 +16,7 @@ export interface McpConnection {
   readonly codexConfig: string
   /** Codex がキーを読む環境変数を設定するコマンド。 */
   readonly codexEnvCommand: string
+  /** 別のマシンで永続化するためのシェルスクリプト（zshrc + LaunchAgent + 即時反映）。 */
+  readonly persistEnvScript: string
   readonly note: string | null
 }

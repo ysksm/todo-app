@@ -151,9 +151,18 @@ export function McpSettings({ dependencies }: McpSettingsProps) {
               </div>
             )}
             <details className="mcp-persist__manual">
-              <summary>手動で設定する場合のコマンド</summary>
+              <summary>手動・別のマシンで設定する場合</summary>
+              <p>
+                別のマシンで使う場合は、下のスクリプトをそのマシンのターミナルに
+                貼り付けて実行してください（ボタンと同じ永続化を行います）。
+              </p>
               <CopyableCommand
-                label="キーの環境変数を設定"
+                label="別のマシンで実行するスクリプト"
+                value={connection.persistEnvScript}
+                secret={connection.apiKey}
+              />
+              <CopyableCommand
+                label="このセッションだけ設定するコマンド"
                 value={connection.codexEnvCommand}
                 secret={connection.apiKey}
               />
