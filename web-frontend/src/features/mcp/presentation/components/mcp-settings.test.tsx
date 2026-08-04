@@ -16,7 +16,9 @@ const LOCAL_CONNECTION: McpConnection = {
   addCommand: `claude mcp add --transport http todo-app http://127.0.0.1:8000/mcp --header "Authorization: Bearer ${API_KEY}"`,
   clientConfig: `{\n  "url": "http://127.0.0.1:8000/mcp",\n  "key": "${API_KEY}"\n}`,
   connectorUrl: 'http://127.0.0.1:8000/mcp',
-  codexConfig: `[mcp_servers.todo-app]\nurl = "http://127.0.0.1:8000/mcp"\nbearer_token = "${API_KEY}"\n`,
+  codexConfig:
+    '[mcp_servers.todo-app]\nurl = "http://127.0.0.1:8000/mcp"\nbearer_token_env_var = "TODO_APP_MCP_TOKEN"\n',
+  codexEnvCommand: `launchctl setenv TODO_APP_MCP_TOKEN '${API_KEY}'\nexport TODO_APP_MCP_TOKEN='${API_KEY}'`,
   note: null,
 }
 
@@ -53,7 +55,7 @@ describe('McpSettings', () => {
     )
     expect(screen.getByRole('heading', { name: 'Claude アプリ' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'ChatGPT' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Codex CLI' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Codex' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'その他のクライアント' })).toBeInTheDocument()
   })
 

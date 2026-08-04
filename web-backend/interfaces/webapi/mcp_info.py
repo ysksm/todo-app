@@ -30,7 +30,9 @@ class McpConnection(BaseModel):
     入力して許可する。URL 自体にキーは含まれない。
     """
     codex_config: str
-    """Codex CLI 向けの ~/.codex/config.toml スニペット。"""
+    """Codex 向けの ~/.codex/config.toml スニペット。キーは環境変数で渡す。"""
+    codex_env_command: str
+    """Codex がキーを読む環境変数を設定するコマンド。"""
     note: str | None
 
 
@@ -58,7 +60,8 @@ def create_mcp_info_router(settings: McpSettings) -> APIRouter:
             add_command=build_add_command(settings.server_name, url, key),
             client_config=build_client_config(settings.server_name, url, key),
             connector_url=url,
-            codex_config=build_codex_config(settings.server_name, url, key),
+            codex_config=build_codex_config(settings.server_name, url),
+            codex_env_command=build_codex_env_command(key),
             note=None
             if is_local
             else "認証キーはローカルからの参照時のみ表示されます。"
@@ -75,9 +78,29 @@ def build_add_command(server_name: str, url: str, api_key: str) -> str:
     )
 
 
-def build_codex_config(server_name: str, url: str, api_key: str) -> str:
-    """Codex CLI の設定スニペット。キーは Bearer トークンとして送る。"""
-    return f'[mcp_servers.{server_name}]\nurl = "{url}"\nbearer_token = "{api_key}"\n'
+#: Codex が Bearer トークンを読む環境変数名。
+CODEX_TOKEN_ENV_VAR = "TODO_APP_MCP_TOKEN"
+
+
+def build_codex_config(server_name: str, url: str) -> str:
+    """Codex の設定スニペット。キーは環境変数経由で Bearer トークンとして送られる。"""
+    return (
+        f"[mcp_servers.{server_name}]\n"
+        f'url = "{url}"\n'
+        f'bearer_token_env_var = "{CODEX_TOKEN_ENV_VAR}"\n'
+    )
+
+
+def build_codex_env_command(api_key: str) -> str:
+    """キーを環境変数に載せるコマンド。
+
+    launchctl setenv は GUI アプリ（ChatGPT アプリの Codex など）向け、
+    export はターミナルから使う Codex CLI 向け。
+    """
+    return (
+        f"launchctl setenv {CODEX_TOKEN_ENV_VAR} '{api_key}'\n"
+        f"export {CODEX_TOKEN_ENV_VAR}='{api_key}'"
+    )
 
 
 def build_client_config(server_name: str, url: str, api_key: str) -> str:

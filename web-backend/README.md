@@ -148,10 +148,17 @@ claude mcp add --transport http todo-app http://127.0.0.1:8000/mcp \
 ```
 
 ```toml
-# Codex CLI — append to ~/.codex/config.toml (recent versions support HTTP servers)
+# Codex — append to ~/.codex/config.toml (recent versions support HTTP servers)
 [mcp_servers.todo-app]
 url = "http://127.0.0.1:8000/mcp"
-bearer_token = "<the API key>"
+bearer_token_env_var = "TODO_APP_MCP_TOKEN"
+```
+
+```sh
+# Codex reads the key from that environment variable:
+launchctl setenv TODO_APP_MCP_TOKEN "$(cat data/mcp_api_key)"   # for GUI apps (ChatGPT app)
+export TODO_APP_MCP_TOKEN="$(cat data/mcp_api_key)"             # for the terminal (add to ~/.zshrc)
+# then fully quit and restart Codex / the ChatGPT app
 ```
 
 ChatGPT: 設定 → コネクタ → 詳細設定で開発者モードを有効にし、「コネクタを作成」に

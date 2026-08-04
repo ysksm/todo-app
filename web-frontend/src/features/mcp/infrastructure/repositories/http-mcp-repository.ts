@@ -27,6 +27,7 @@ function toMcpConnection(response: McpConnectionResponse): McpConnection {
     clientConfig: response.client_config,
     connectorUrl: response.connector_url,
     codexConfig: response.codex_config,
+    codexEnvCommand: response.codex_env_command,
     note: response.note,
   }
 }

@@ -293,7 +293,12 @@ class TestConnectionInfo:
         body = client.get("/api/mcp/connection").json()
 
         assert body["codex_config"] == (
-            f'[mcp_servers.todo-app]\nurl = "{body["url"]}"\nbearer_token = "{TEST_API_KEY}"\n'
+            f'[mcp_servers.todo-app]\nurl = "{body["url"]}"\n'
+            'bearer_token_env_var = "TODO_APP_MCP_TOKEN"\n'
+        )
+        assert body["codex_env_command"] == (
+            f"launchctl setenv TODO_APP_MCP_TOKEN '{TEST_API_KEY}'\n"
+            f"export TODO_APP_MCP_TOKEN='{TEST_API_KEY}'"
         )
 
     def test_uses_the_public_url_when_configured(

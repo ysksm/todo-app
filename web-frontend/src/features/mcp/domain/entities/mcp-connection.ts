@@ -12,7 +12,9 @@ export interface McpConnection {
   readonly clientConfig: string
   /** Claude アプリ・ChatGPT のコネクタ用 URL（ヘッダー不要、キーは ?key= で URL に載る）。 */
   readonly connectorUrl: string
-  /** Codex CLI 向けの ~/.codex/config.toml スニペット。 */
+  /** Codex 向けの ~/.codex/config.toml スニペット。キーは環境変数で渡す。 */
   readonly codexConfig: string
+  /** Codex がキーを読む環境変数を設定するコマンド。 */
+  readonly codexEnvCommand: string
   readonly note: string | null
 }

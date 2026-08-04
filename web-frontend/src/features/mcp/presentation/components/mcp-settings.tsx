@@ -84,14 +84,20 @@ export function McpSettings({ dependencies }: McpSettingsProps) {
           </section>
 
           <section className="mcp-client" aria-labelledby="mcp-client-codex">
-            <h3 id="mcp-client-codex">Codex CLI</h3>
-            <p>
-              <code>~/.codex/config.toml</code> に次を追記します。キーは Bearer トークン
-              として送られます（HTTP サーバー対応には新しめの Codex CLI が必要です）。
-            </p>
+            <h3 id="mcp-client-codex">Codex</h3>
+            <ol className="mcp-client__steps">
+              <li><code>~/.codex/config.toml</code> に下のスニペットを追記する</li>
+              <li>
+                下のコマンドをターミナルに貼り付けて実行する（1 行目は ChatGPT アプリなどの
+                GUI 用、2 行目はターミナル用。ターミナル用は <code>~/.zshrc</code> に
+                追記すると再起動後も有効）
+              </li>
+              <li>Codex / ChatGPT アプリを完全終了して再起動する</li>
+            </ol>
+            <CopyableCommand label="config.toml に追記" value={connection.codexConfig} />
             <CopyableCommand
-              label="config.toml に追記"
-              value={connection.codexConfig}
+              label="キーの環境変数を設定"
+              value={connection.codexEnvCommand}
               secret={connection.apiKey}
             />
           </section>
