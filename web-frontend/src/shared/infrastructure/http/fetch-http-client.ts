@@ -1,6 +1,12 @@
 import type { HttpClient } from './http-client'
 import { HttpError } from './http-error'
 
+/**
+ * サーバーが応答しないときに isSaving が立ちっぱなしになり、
+ * 画面の全ボタンが無効のまま戻らなくなるのを防ぐための上限。
+ */
+const REQUEST_TIMEOUT_MS = 15_000
+
 export class FetchHttpClient implements HttpClient {
   private readonly baseUrl: string
 
@@ -9,7 +15,10 @@ export class FetchHttpClient implements HttpClient {
   }
 
   async request<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, init)
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      ...init,
+    })
 
     if (!response.ok) {
       const message = await this.readErrorMessage(response)

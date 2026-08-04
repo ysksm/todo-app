@@ -22,4 +22,8 @@ fi
 # X-Forwarded-Proto / Host からクライアントの見た目の URL を復元する。
 set -- "$@" --proxy-headers --forwarded-allow-ips "${FORWARDED_ALLOW_IPS:-127.0.0.1}"
 
+# SSE 接続は開きっぱなしなので、graceful shutdown を無期限に待つと
+# --reload のリロードや終了のたびにサーバー全体が固まる。数秒で打ち切る。
+set -- "$@" --timeout-graceful-shutdown "${TIMEOUT_GRACEFUL_SHUTDOWN:-3}"
+
 exec uv run uvicorn main:app "$@"
