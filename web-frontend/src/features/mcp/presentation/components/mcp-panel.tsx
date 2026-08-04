@@ -48,6 +48,17 @@ export function McpPanel({ dependencies }: McpPanelProps) {
                 secret={connection.apiKey}
               />
 
+              <CopyableCommand
+                label="Claude アプリ（カスタムコネクタ用 URL）"
+                value={connection.connectorUrl}
+                secret={connection.apiKey}
+              />
+              <p className="mcp-panel__note" role="note">
+                Claude アプリから接続するには、公開 HTTPS の URL が必要です。
+                トンネル（cloudflared / ngrok など）で公開し、上の URL のホスト部分を
+                トンネルの URL に読み替えてください（詳細は web-backend/README.md）。
+              </p>
+
               <dl className="mcp-panel__details">
                 <div>
                   <dt>エンドポイント</dt>

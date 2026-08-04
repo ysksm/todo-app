@@ -6,5 +6,6 @@ export interface McpConnectionResponse {
   is_local_request: boolean
   add_command: string
   client_config: string
+  connector_url: string
   note: string | null
 }

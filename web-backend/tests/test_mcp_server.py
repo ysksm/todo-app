@@ -201,6 +201,47 @@ class TestMcpEndpointAuth:
 
         assert response.status_code == 200
 
+    def test_accepts_a_query_key(self, client: TestClient) -> None:
+        """Claude アプリのカスタムコネクタはヘッダーを送れないので ?key= でも通す。"""
+        response = client.post(
+            f"{self.ENDPOINT}?key={TEST_API_KEY}",
+            json=self.INITIALIZE,
+            headers=self.HEADERS,
+        )
+
+        assert response.status_code == 200
+
+    def test_rejects_a_wrong_query_key(self, client: TestClient) -> None:
+        response = client.post(
+            f"{self.ENDPOINT}?key=wrong-key",
+            json=self.INITIALIZE,
+            headers=self.HEADERS,
+        )
+
+        assert response.status_code == 401
+
+    def test_redirect_from_the_bare_mount_path_keeps_the_query(self, client: TestClient) -> None:
+        """コネクタには /mcp?key=... を渡すので、/mcp/ への 307 でクエリを失わない。"""
+        response = client.post(
+            f"/mcp?key={TEST_API_KEY}",
+            json=self.INITIALIZE,
+            headers=self.HEADERS,
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 307
+        assert response.headers["Location"] == f"/mcp/?key={TEST_API_KEY}"
+
+    def test_the_query_key_works_through_the_redirect(self, client: TestClient) -> None:
+        response = client.post(
+            f"/mcp?key={TEST_API_KEY}",
+            json=self.INITIALIZE,
+            headers=self.HEADERS,
+            follow_redirects=True,
+        )
+
+        assert response.status_code == 200
+
 
 class TestApiKeyLoading:
     def test_uses_the_environment_variable_first(self, tmp_path: Path, monkeypatch) -> None:
@@ -254,6 +295,28 @@ class TestConnectionInfo:
 
         # TestClient は常にローカル扱いなので、判定関数そのものを確認する。
         assert body["is_local_request"] is True
+
+    def test_returns_a_connector_url_with_the_key_in_the_query(self, client: TestClient) -> None:
+        """Claude アプリのカスタムコネクタにはヘッダーが無いので ?key= 付き URL を出す。"""
+        body = client.get("/api/mcp/connection").json()
+
+        assert body["connector_url"] == f"{body['url']}?key={TEST_API_KEY}"
+
+    def test_uses_the_public_url_when_configured(
+        self, service: TodoService, mcp_settings
+    ) -> None:
+        from dataclasses import replace
+
+        from interfaces.webapi.app import create_app
+
+        settings = replace(mcp_settings, public_url="https://todo.example.trycloudflare.com")
+        with TestClient(create_app(settings, todo_service=service)) as public_client:
+            body = public_client.get("/api/mcp/connection").json()
+
+        assert body["url"] == "https://todo.example.trycloudflare.com/mcp"
+        assert body["connector_url"] == (
+            f"https://todo.example.trycloudflare.com/mcp?key={TEST_API_KEY}"
+        )
 
 
 def test_non_local_requests_get_a_placeholder_instead_of_the_key() -> None:

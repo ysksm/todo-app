@@ -10,5 +10,7 @@ export interface McpConnection {
   readonly addCommand: string
   /** 他の MCP クライアント向けの設定 JSON。 */
   readonly clientConfig: string
+  /** Claude アプリのカスタムコネクタ用 URL（ヘッダー不要、キーは ?key= で URL に載る）。 */
+  readonly connectorUrl: string
   readonly note: string | null
 }

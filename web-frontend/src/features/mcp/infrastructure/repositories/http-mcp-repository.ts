@@ -25,6 +25,7 @@ function toMcpConnection(response: McpConnectionResponse): McpConnection {
     isLocalRequest: response.is_local_request,
     addCommand: response.add_command,
     clientConfig: response.client_config,
+    connectorUrl: response.connector_url,
     note: response.note,
   }
 }

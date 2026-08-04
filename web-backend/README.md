@@ -113,8 +113,13 @@ Tools: `list_todos`, `render_todo_tree`, `get_todo`, `create_todo`, `update_todo
 The key comes from `MCP_API_KEY`. If that is not set, a key is generated on first start
 and stored in `data/mcp_api_key` (mode `600`, git-ignored) so it survives restarts.
 
-Send it as `Authorization: Bearer <key>` or `X-API-Key: <key>`. Requests without a valid
-key get `401`.
+Send it as `Authorization: Bearer <key>` or `X-API-Key: <key>`. Clients that cannot set
+headers (the Claude app's custom connectors) can put the key in the URL instead:
+`/mcp?key=<key>`. Requests without a valid key get `401`.
+
+Note that a query-string key can end up in access logs and browser history — prefer the
+header when the client supports it, and regenerate the key (delete `data/mcp_api_key`)
+if a URL leaks.
 
 ### Registering a client
 
@@ -138,6 +143,59 @@ running with `HOST=0.0.0.0`, list the hostnames clients will use:
 ```sh
 MCP_ALLOWED_HOSTS=todo.example.com,192.168.1.10:8000 ./start.sh
 ```
+
+### HTTPS
+
+`start.sh` terminates TLS itself when both `SSL_CERTFILE` and `SSL_KEYFILE` are set.
+For local certificates, [mkcert](https://github.com/FiloSottile/mkcert) is the easiest:
+
+```sh
+mkcert -install
+mkcert localhost 127.0.0.1
+SSL_CERTFILE=./localhost+1.pem SSL_KEYFILE=./localhost+1-key.pem ./start.sh
+# → https://127.0.0.1:8000
+```
+
+Behind a tunnel or reverse proxy, leave TLS to the proxy. `start.sh` passes
+`--proxy-headers`, so `X-Forwarded-Proto` / `Host` from the proxy are used to build the
+URLs shown by `GET /api/mcp/connection`. If those headers are not forwarded correctly,
+set `MCP_PUBLIC_URL=https://your-host` to override the displayed base URL.
+
+### Connecting from the Claude app (custom connector)
+
+The Claude app (claude.ai / desktop) connects to remote MCP servers from Anthropic's
+infrastructure, so it needs a **publicly reachable HTTPS URL** with a valid certificate —
+a self-signed localhost cert is not enough. The quickest way is a tunnel:
+
+```sh
+# terminal 1: the backend
+./start.sh
+
+# terminal 2: a tunnel (no account needed for a quick try)
+cloudflared tunnel --url http://127.0.0.1:8000
+# → prints https://<random>.trycloudflare.com
+```
+
+Then:
+
+1. Restart the backend with the tunnel host allowed and (optionally) shown in the UI:
+
+   ```sh
+   MCP_ALLOWED_HOSTS=<random>.trycloudflare.com \
+   MCP_PUBLIC_URL=https://<random>.trycloudflare.com ./start.sh
+   ```
+
+2. In the Claude app: 設定 → コネクタ → 「カスタムコネクタを追加」 and paste
+
+   ```
+   https://<random>.trycloudflare.com/mcp?key=<the API key>
+   ```
+
+   Custom connectors cannot send custom headers, which is why the key rides in the URL
+   (`?key=`). The web UI's "MCP で連携する" panel shows this URL ready to copy.
+
+Anyone with that URL can operate the server, so treat it like a password: stop the
+tunnel when you are done, and delete `data/mcp_api_key` to rotate the key if needed.
 
 ## CLI
 

@@ -15,6 +15,7 @@ const LOCAL_CONNECTION: McpConnection = {
   isLocalRequest: true,
   addCommand: `claude mcp add --transport http todo-app http://127.0.0.1:8000/mcp --header "Authorization: Bearer ${API_KEY}"`,
   clientConfig: `{\n  "url": "http://127.0.0.1:8000/mcp",\n  "key": "${API_KEY}"\n}`,
+  connectorUrl: `http://127.0.0.1:8000/mcp?key=${API_KEY}`,
   note: null,
 }
 

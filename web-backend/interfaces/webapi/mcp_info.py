@@ -23,6 +23,11 @@ class McpConnection(BaseModel):
     """Claude Code に登録するコマンド。"""
     client_config: str
     """他の MCP クライアント向けの設定 JSON。"""
+    connector_url: str
+    """Claude アプリのカスタムコネクタ用 URL。
+
+    カスタムコネクタはヘッダーを送れないので、キーを ?key= で URL に載せる。
+    """
     note: str | None
 
 
@@ -37,7 +42,8 @@ def create_mcp_info_router(settings: McpSettings) -> APIRouter:
         認証していないので、外部に開いた状態でキーを配らないようにするため。
         """
         is_local = is_loopback_client(request)
-        url = f"{str(request.base_url).rstrip('/')}{settings.mount_path}"
+        base_url = settings.public_url or str(request.base_url).rstrip("/")
+        url = f"{base_url}{settings.mount_path}"
         key = settings.api_key if is_local else KEY_PLACEHOLDER
 
         return McpConnection(
@@ -48,6 +54,7 @@ def create_mcp_info_router(settings: McpSettings) -> APIRouter:
             is_local_request=is_local,
             add_command=build_add_command(settings.server_name, url, key),
             client_config=build_client_config(settings.server_name, url, key),
+            connector_url=f"{url}?key={key}",
             note=None
             if is_local
             else "認証キーはローカルからの参照時のみ表示されます。"

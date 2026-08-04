@@ -77,7 +77,10 @@ def create_app(
 
 
 def _redirect_to_mcp(mount_path: str):
-    async def redirect(_request: Request) -> RedirectResponse:
-        return RedirectResponse(f"{mount_path}/", status_code=307)
+    async def redirect(request: Request) -> RedirectResponse:
+        # ?key=... で認証するクライアントがいるので、クエリは落とさず引き継ぐ。
+        query = request.url.query
+        target = f"{mount_path}/{f'?{query}' if query else ''}"
+        return RedirectResponse(target, status_code=307)
 
     return redirect
