@@ -113,13 +113,28 @@ Tools: `list_todos`, `render_todo_tree`, `get_todo`, `create_todo`, `update_todo
 The key comes from `MCP_API_KEY`. If that is not set, a key is generated on first start
 and stored in `data/mcp_api_key` (mode `600`, git-ignored) so it survives restarts.
 
-Send it as `Authorization: Bearer <key>` or `X-API-Key: <key>`. Clients that cannot set
-headers (the Claude app's custom connectors) can put the key in the URL instead:
-`/mcp?key=<key>`. Requests without a valid key get `401`.
+Send it as `Authorization: Bearer <key>` or `X-API-Key: <key>`. Requests without a valid
+token get `401`.
 
-Note that a query-string key can end up in access logs and browser history — prefer the
-header when the client supports it, and regenerate the key (delete `data/mcp_api_key`)
-if a URL leaks.
+### OAuth (for clients that cannot send headers)
+
+The Claude app and ChatGPT connectors cannot set custom headers, so the server also
+implements the MCP authorization spec (OAuth 2.0 with PKCE and dynamic client
+registration, per RFC 8414 / 9728 / 7591):
+
+1. The client hits `/mcp` unauthenticated, gets a `401` with a `WWW-Authenticate`
+   header pointing at `/.well-known/oauth-protected-resource/mcp`.
+2. It discovers the authorization server metadata, registers itself at `/register`,
+   and starts the authorization code flow at `/authorize`.
+3. The browser opens the consent page (`/oauth/consent`) — **enter the MCP API key**
+   there to approve the connection.
+4. The client exchanges the code at `/token` and calls `/mcp` with the issued
+   Bearer token. Tokens are refreshed automatically via `refresh_token`.
+
+Issued tokens and client registrations are persisted in `data/mcp_oauth.json`
+(git-ignored) so they survive `--reload` restarts. The OAuth issuer URL is
+`MCP_PUBLIC_URL` (falling back to `http://127.0.0.1:<PORT>`), so **set
+`MCP_PUBLIC_URL` when serving through a tunnel**.
 
 ### Registering a client
 
@@ -135,12 +150,14 @@ claude mcp add --transport http todo-app http://127.0.0.1:8000/mcp \
 ```toml
 # Codex CLI — append to ~/.codex/config.toml (recent versions support HTTP servers)
 [mcp_servers.todo-app]
-url = "http://127.0.0.1:8000/mcp?key=<the API key>"
+url = "http://127.0.0.1:8000/mcp"
+bearer_token = "<the API key>"
 ```
 
 ChatGPT: 設定 → コネクタ → 詳細設定で開発者モードを有効にし、「コネクタを作成」に
-`https://<public-host>/mcp?key=<the API key>` を登録する（認証は「なし」を選ぶ。
-Claude アプリと同じく公開 HTTPS が必要 — see "Connecting from the Claude app" below）。
+`https://<public-host>/mcp` を登録する（認証は「OAuth」を選ぶ）。接続時に開く
+承認画面で MCP API キーを入力する。Claude アプリと同じく公開 HTTPS が必要
+（see "Connecting from the Claude app" below）。
 
 `GET /api/mcp/connection` returns the same information as JSON. **That endpoint is not
 authenticated**, so it only includes the actual key when the request comes from a
@@ -189,7 +206,8 @@ cloudflared tunnel --url http://127.0.0.1:8000
 
 Then:
 
-1. Restart the backend with the tunnel host allowed and (optionally) shown in the UI:
+1. Restart the backend with the tunnel host allowed and the public URL set
+   (`MCP_PUBLIC_URL` is required here — it becomes the OAuth issuer):
 
    ```sh
    MCP_ALLOWED_HOSTS=<random>.trycloudflare.com \
@@ -199,14 +217,15 @@ Then:
 2. In the Claude app: 設定 → コネクタ → 「カスタムコネクタを追加」 and paste
 
    ```
-   https://<random>.trycloudflare.com/mcp?key=<the API key>
+   https://<random>.trycloudflare.com/mcp
    ```
 
-   Custom connectors cannot send custom headers, which is why the key rides in the URL
-   (`?key=`). The web UI's "MCP で連携する" panel shows this URL ready to copy.
+3. When the connector first connects, a consent page opens in the browser —
+   enter the MCP API key there to approve it. Custom connectors cannot send
+   custom headers, which is why authentication happens via OAuth instead.
 
-Anyone with that URL can operate the server, so treat it like a password: stop the
-tunnel when you are done, and delete `data/mcp_api_key` to rotate the key if needed.
+Stop the tunnel when you are done. To cut off previously authorized connectors,
+delete `data/mcp_oauth.json` (issued tokens) and `data/mcp_api_key` (the key).
 
 ## CLI
 

@@ -26,7 +26,8 @@ class McpConnection(BaseModel):
     connector_url: str
     """Claude アプリ・ChatGPT のコネクタ用 URL。
 
-    どちらもカスタムヘッダーを送れないので、キーを ?key= で URL に載せる。
+    URL を登録すると OAuth の認可フローが始まり、承認画面で API キーを
+    入力して許可する。URL 自体にキーは含まれない。
     """
     codex_config: str
     """Codex CLI 向けの ~/.codex/config.toml スニペット。"""
@@ -56,7 +57,7 @@ def create_mcp_info_router(settings: McpSettings) -> APIRouter:
             is_local_request=is_local,
             add_command=build_add_command(settings.server_name, url, key),
             client_config=build_client_config(settings.server_name, url, key),
-            connector_url=f"{url}?key={key}",
+            connector_url=url,
             codex_config=build_codex_config(settings.server_name, url, key),
             note=None
             if is_local
@@ -75,11 +76,8 @@ def build_add_command(server_name: str, url: str, api_key: str) -> str:
 
 
 def build_codex_config(server_name: str, url: str, api_key: str) -> str:
-    """Codex CLI の設定スニペット。
-
-    ヘッダー指定に依存しないよう、キーは ?key= で URL に載せる。
-    """
-    return f'[mcp_servers.{server_name}]\nurl = "{url}?key={api_key}"\n'
+    """Codex CLI の設定スニペット。キーは Bearer トークンとして送る。"""
+    return f'[mcp_servers.{server_name}]\nurl = "{url}"\nbearer_token = "{api_key}"\n'
 
 
 def build_client_config(server_name: str, url: str, api_key: str) -> str:

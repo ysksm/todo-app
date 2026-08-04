@@ -1,58 +1,77 @@
 from __future__ import annotations
 
 import secrets
+from collections.abc import Awaitable, Callable
 
-from starlette.datastructures import Headers, QueryParams
+from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from mcp.server.auth.provider import AccessToken
+
 BEARER_PREFIX = "bearer "
 API_KEY_HEADER = "x-api-key"
-API_KEY_QUERY_PARAM = "key"
+
+TokenLoader = Callable[[str], Awaitable[AccessToken | None]]
 
 
-class ApiKeyMiddleware:
-    """MCP エンドポイントを共有キーで保護する ASGI ミドルウェア。
+class McpAuthMiddleware:
+    """MCP エンドポイントを Bearer トークンで保護する ASGI ミドルウェア。
 
-    `Authorization: Bearer <key>` と `X-API-Key: <key>` のどちらでも受け付ける。
-    加えて `?key=<key>` クエリでも受け付ける。Claude アプリのカスタムコネクタのように
-    カスタムヘッダーを送れないクライアントは URL にキーを載せるしかないため。
+    受け付けるのは次の 2 種類。どちらも Authorization: Bearer ヘッダー
+    （または X-API-Key）で送る。クエリパラメータでは受け付けない。
+
+    - 共有 API キー（Claude Code や Codex など、ヘッダーを送れるクライアント向け）
+    - OAuth で発行したアクセストークン（Claude アプリ・ChatGPT のコネクタ向け）
+
+    未認証の 401 には RFC 9728 の resource_metadata を載せ、OAuth 対応
+    クライアントが認可サーバーを発見できるようにする。
     """
 
-    def __init__(self, app: ASGIApp, api_key: str) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        api_key: str,
+        token_loader: TokenLoader,
+        resource_metadata_url: str,
+    ) -> None:
         self.app = app
         self.api_key = api_key
+        self.token_loader = token_loader
+        self.resource_metadata_url = resource_metadata_url
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
 
-        presented_key = extract_api_key(
-            Headers(scope=scope),
-            QueryParams(scope.get("query_string", b"")),
-        )
-        if presented_key is None or not secrets.compare_digest(presented_key, self.api_key):
-            response = JSONResponse(
-                {"error": "unauthorized", "detail": "A valid MCP API key is required."},
-                status_code=401,
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-            await response(scope, receive, send)
+        if await self._is_authorized(Headers(scope=scope)):
+            await self.app(scope, receive, send)
             return
 
-        await self.app(scope, receive, send)
+        response = JSONResponse(
+            {"error": "unauthorized", "detail": "A valid MCP API key or OAuth token is required."},
+            status_code=401,
+            headers={
+                "WWW-Authenticate": (
+                    f'Bearer resource_metadata="{self.resource_metadata_url}"'
+                )
+            },
+        )
+        await response(scope, receive, send)
+
+    async def _is_authorized(self, headers: Headers) -> bool:
+        presented = extract_bearer_token(headers)
+        if presented is None:
+            return False
+        if secrets.compare_digest(presented, self.api_key):
+            return True
+        return await self.token_loader(presented) is not None
 
 
-def extract_api_key(headers: Headers, query_params: QueryParams | None = None) -> str | None:
+def extract_bearer_token(headers: Headers) -> str | None:
     authorization = headers.get("authorization")
     if authorization and authorization.lower().startswith(BEARER_PREFIX):
         return authorization[len(BEARER_PREFIX) :].strip() or None
 
-    header_key = headers.get(API_KEY_HEADER)
-    if header_key:
-        return header_key
-
-    if query_params is not None:
-        return query_params.get(API_KEY_QUERY_PARAM) or None
-    return None
+    return headers.get(API_KEY_HEADER) or None

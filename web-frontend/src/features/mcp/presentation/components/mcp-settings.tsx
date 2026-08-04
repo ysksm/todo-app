@@ -33,8 +33,8 @@ export function McpSettings({ dependencies }: McpSettingsProps) {
             <div>
               <dt>認証</dt>
               <dd>
-                <code>{connection.headerName}: Bearer &lt;キー&gt;</code> または{' '}
-                <code>?key=&lt;キー&gt;</code>
+                <code>{connection.headerName}: Bearer &lt;キー&gt;</code>、または OAuth
+                （コネクタ登録時に認可フローが自動で始まります）
               </dd>
             </div>
           </dl>
@@ -52,8 +52,8 @@ export function McpSettings({ dependencies }: McpSettingsProps) {
           <section className="mcp-client" aria-labelledby="mcp-client-claude-app">
             <h3 id="mcp-client-claude-app">Claude アプリ</h3>
             <ol className="mcp-client__steps">
-              <li>設定 → コネクタ → 「カスタムコネクタを追加」を開く</li>
-              <li>下の URL を貼り付けて追加する</li>
+              <li>設定 → コネクタ → 「カスタムコネクタを追加」で下の URL を登録する</li>
+              <li>接続時に開く認可画面で MCP API キーを入力し「許可する」を押す</li>
             </ol>
             <CopyableCommand
               label="カスタムコネクタ用 URL"
@@ -66,7 +66,8 @@ export function McpSettings({ dependencies }: McpSettingsProps) {
             <h3 id="mcp-client-chatgpt">ChatGPT</h3>
             <ol className="mcp-client__steps">
               <li>設定 → コネクタ → 詳細設定で「開発者モード」を有効にする</li>
-              <li>「コネクタを作成」で下の URL を MCP サーバー URL として登録する（認証は「なし」を選択）</li>
+              <li>「コネクタを作成」で下の URL を MCP サーバー URL として登録する（認証は「OAuth」を選択）</li>
+              <li>接続時に開く認可画面で MCP API キーを入力し「許可する」を押す</li>
             </ol>
             <CopyableCommand
               label="コネクタ用 URL"
@@ -78,8 +79,8 @@ export function McpSettings({ dependencies }: McpSettingsProps) {
           <section className="mcp-client" aria-labelledby="mcp-client-codex">
             <h3 id="mcp-client-codex">Codex CLI</h3>
             <p>
-              <code>~/.codex/config.toml</code> に次を追記します（HTTP サーバー対応には
-              新しめの Codex CLI が必要です）。
+              <code>~/.codex/config.toml</code> に次を追記します。キーは Bearer トークン
+              として送られます（HTTP サーバー対応には新しめの Codex CLI が必要です）。
             </p>
             <CopyableCommand
               label="config.toml に追記"
@@ -108,7 +109,7 @@ export function McpSettings({ dependencies }: McpSettingsProps) {
           )}
           {connection.apiKey && (
             <p className="mcp-panel__warning">
-              この認証キー（?key= 付き URL を含む）はサーバーを操作できます。共有しないでください。
+              この認証キーはサーバーを操作できます。共有しないでください。
             </p>
           )}
         </>

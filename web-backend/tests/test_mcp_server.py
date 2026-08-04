@@ -174,7 +174,10 @@ class TestMcpEndpointAuth:
         response = client.post(self.ENDPOINT, json=self.INITIALIZE, headers=self.HEADERS)
 
         assert response.status_code == 401
-        assert response.headers["WWW-Authenticate"] == "Bearer"
+        # RFC 9728: OAuth 対応クライアントが認可サーバーを発見できるようにする。
+        assert response.headers["WWW-Authenticate"] == (
+            'Bearer resource_metadata="http://127.0.0.1:8000/.well-known/oauth-protected-resource/mcp"'
+        )
 
     def test_rejects_a_wrong_key(self, client: TestClient) -> None:
         response = client.post(
@@ -204,19 +207,10 @@ class TestMcpEndpointAuth:
 
         assert response.status_code == 200
 
-    def test_accepts_a_query_key(self, client: TestClient) -> None:
-        """Claude アプリのカスタムコネクタはヘッダーを送れないので ?key= でも通す。"""
+    def test_rejects_a_key_in_the_query_string(self, client: TestClient) -> None:
+        """キーを URL に載せる方式は廃止した。Bearer ヘッダーか OAuth を使う。"""
         response = client.post(
             f"{self.ENDPOINT}?key={TEST_API_KEY}",
-            json=self.INITIALIZE,
-            headers=self.HEADERS,
-        )
-
-        assert response.status_code == 200
-
-    def test_rejects_a_wrong_query_key(self, client: TestClient) -> None:
-        response = client.post(
-            f"{self.ENDPOINT}?key=wrong-key",
             json=self.INITIALIZE,
             headers=self.HEADERS,
         )
@@ -224,26 +218,15 @@ class TestMcpEndpointAuth:
         assert response.status_code == 401
 
     def test_redirect_from_the_bare_mount_path_keeps_the_query(self, client: TestClient) -> None:
-        """コネクタには /mcp?key=... を渡すので、/mcp/ への 307 でクエリを失わない。"""
         response = client.post(
-            f"/mcp?key={TEST_API_KEY}",
+            "/mcp?foo=bar",
             json=self.INITIALIZE,
             headers=self.HEADERS,
             follow_redirects=False,
         )
 
         assert response.status_code == 307
-        assert response.headers["Location"] == f"/mcp/?key={TEST_API_KEY}"
-
-    def test_the_query_key_works_through_the_redirect(self, client: TestClient) -> None:
-        response = client.post(
-            f"/mcp?key={TEST_API_KEY}",
-            json=self.INITIALIZE,
-            headers=self.HEADERS,
-            follow_redirects=True,
-        )
-
-        assert response.status_code == 200
+        assert response.headers["Location"] == "/mcp/?foo=bar"
 
 
 class TestApiKeyLoading:
@@ -299,17 +282,18 @@ class TestConnectionInfo:
         # TestClient は常にローカル扱いなので、判定関数そのものを確認する。
         assert body["is_local_request"] is True
 
-    def test_returns_a_connector_url_with_the_key_in_the_query(self, client: TestClient) -> None:
-        """Claude アプリ・ChatGPT のコネクタにはヘッダーが無いので ?key= 付き URL を出す。"""
+    def test_returns_a_connector_url_without_the_key(self, client: TestClient) -> None:
+        """コネクタ用 URL は素の URL。登録すると OAuth の認可フローが始まる。"""
         body = client.get("/api/mcp/connection").json()
 
-        assert body["connector_url"] == f"{body['url']}?key={TEST_API_KEY}"
+        assert body["connector_url"] == body["url"]
+        assert TEST_API_KEY not in body["connector_url"]
 
     def test_returns_a_codex_config_snippet(self, client: TestClient) -> None:
         body = client.get("/api/mcp/connection").json()
 
         assert body["codex_config"] == (
-            f'[mcp_servers.todo-app]\nurl = "{body["url"]}?key={TEST_API_KEY}"\n'
+            f'[mcp_servers.todo-app]\nurl = "{body["url"]}"\nbearer_token = "{TEST_API_KEY}"\n'
         )
 
     def test_uses_the_public_url_when_configured(
@@ -324,9 +308,7 @@ class TestConnectionInfo:
             body = public_client.get("/api/mcp/connection").json()
 
         assert body["url"] == "https://todo.example.trycloudflare.com/mcp"
-        assert body["connector_url"] == (
-            f"https://todo.example.trycloudflare.com/mcp?key={TEST_API_KEY}"
-        )
+        assert body["connector_url"] == "https://todo.example.trycloudflare.com/mcp"
 
 
 def test_non_local_requests_get_a_placeholder_instead_of_the_key() -> None:

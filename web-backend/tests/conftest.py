@@ -25,12 +25,13 @@ def service(repository: TodoRepository) -> TodoService:
 
 
 @pytest.fixture
-def mcp_settings() -> McpSettings:
+def mcp_settings(tmp_path: Path) -> McpSettings:
     return McpSettings(
         api_key=TEST_API_KEY,
         mount_path="/mcp",
         server_name="todo-app",
         allowed_hosts=("testserver",),
+        oauth_store_file=tmp_path / "mcp_oauth.json",
     )
 
 
