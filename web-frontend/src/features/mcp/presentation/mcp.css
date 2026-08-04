@@ -108,6 +108,46 @@
   word-break: break-all;
 }
 
+.mcp-persist {
+  margin: 12px 0;
+}
+
+.mcp-persist__button {
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 4px;
+  background: #2f694c;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mcp-persist__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.mcp-persist__result {
+  margin: 10px 0 0;
+  padding: 10px 12px 10px 28px;
+  border-left: 3px solid #397354;
+  background: #eef5f0;
+  color: #2f694c;
+  font-size: 12px;
+}
+
+.mcp-persist__manual {
+  margin-top: 12px;
+}
+
+.mcp-persist__manual summary {
+  margin-bottom: 8px;
+  color: #496053;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .settings-back {
   padding: 7px 14px;
   border: 1px solid #93a99b;

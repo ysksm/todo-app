@@ -11,3 +11,12 @@ export interface McpConnectionResponse {
   codex_env_command: string
   note: string | null
 }
+
+export interface McpPersistEnvResponse {
+  env_var: string
+  zshrc_path: string
+  zshrc_changed: boolean
+  launch_agent_path: string | null
+  launch_agent_changed: boolean
+  launchctl_applied: boolean
+}

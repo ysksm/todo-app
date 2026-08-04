@@ -22,15 +22,34 @@ const LOCAL_CONNECTION: McpConnection = {
   note: null,
 }
 
-function renderSettings(connection: McpConnection | Error = LOCAL_CONNECTION) {
+const PERSIST_RESULT = {
+  envVar: 'TODO_APP_MCP_TOKEN',
+  zshrcPath: '/Users/tester/.zshrc',
+  zshrcChanged: true,
+  launchAgentPath: '/Users/tester/Library/LaunchAgents/com.todo-app.mcp-env.plist',
+  launchAgentChanged: true,
+  launchctlApplied: true,
+}
+
+function renderSettings(
+  connection: McpConnection | Error = LOCAL_CONNECTION,
+  persist: typeof PERSIST_RESULT | Error = PERSIST_RESULT,
+) {
   const execute =
     connection instanceof Error
       ? vi.fn().mockRejectedValue(connection)
       : vi.fn().mockResolvedValue(connection)
-  const dependencies = { getMcpConnection: { execute } } as unknown as McpDependencies
+  const persistExecute =
+    persist instanceof Error
+      ? vi.fn().mockRejectedValue(persist)
+      : vi.fn().mockResolvedValue(persist)
+  const dependencies = {
+    getMcpConnection: { execute },
+    persistMcpEnv: { execute: persistExecute },
+  } as unknown as McpDependencies
 
   render(<McpSettings dependencies={dependencies} />)
-  return { execute }
+  return { execute, persistExecute }
 }
 
 let user: ReturnType<typeof userEvent.setup>
@@ -136,6 +155,47 @@ describe('McpSettings', () => {
     expect(await screen.findByText('キーはローカルからのみ表示されます。')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'キーを表示' })).not.toBeInTheDocument()
     expect(screen.queryByText(/共有しないでください/)).not.toBeInTheDocument()
+  })
+
+  it('persists the env var with one click and reports what changed', async () => {
+    renderSettings()
+    const persistButton = await screen.findByRole('button', { name: /環境変数を永続化/ })
+
+    await user.click(persistButton)
+
+    const result = await screen.findByRole('status')
+    expect(result).toHaveTextContent('/Users/tester/.zshrc に export を追記・更新しました')
+    expect(result).toHaveTextContent('LaunchAgent を登録しました')
+    expect(result).toHaveTextContent('Codex / ChatGPT アプリを再起動してください')
+  })
+
+  it('reports when everything was already persisted', async () => {
+    renderSettings(LOCAL_CONNECTION, {
+      ...PERSIST_RESULT,
+      zshrcChanged: false,
+      launchAgentChanged: false,
+    })
+
+    await user.click(await screen.findByRole('button', { name: /環境変数を永続化/ }))
+
+    const result = await screen.findByRole('status')
+    expect(result).toHaveTextContent('/Users/tester/.zshrc は設定済みでした')
+    expect(result).toHaveTextContent('LaunchAgent は登録済みでした')
+  })
+
+  it('shows an error when persisting fails', async () => {
+    renderSettings(LOCAL_CONNECTION, new Error('boom'))
+
+    await user.click(await screen.findByRole('button', { name: /環境変数を永続化/ }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('永続化に失敗しました')
+  })
+
+  it('hides the persist button for remote clients', async () => {
+    renderSettings({ ...LOCAL_CONNECTION, apiKey: null, isLocalRequest: false, note: 'note' })
+
+    await screen.findByText('note')
+    expect(screen.queryByRole('button', { name: /環境変数を永続化/ })).not.toBeInTheDocument()
   })
 
   it('reports a failure to load the connection', async () => {

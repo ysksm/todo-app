@@ -3,10 +3,11 @@ from __future__ import annotations
 import ipaddress
 import json
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from interfaces.mcp.config import McpSettings
+from interfaces.mcp.persist_env import persist_env
 
 KEY_PLACEHOLDER = "$MCP_API_KEY"
 
@@ -34,6 +35,17 @@ class McpConnection(BaseModel):
     codex_env_command: str
     """Codex がキーを読む環境変数を設定するコマンド。"""
     note: str | None
+
+
+class PersistEnvResponse(BaseModel):
+    """POST /api/mcp/persist-env の結果。"""
+
+    env_var: str
+    zshrc_path: str
+    zshrc_changed: bool
+    launch_agent_path: str | None
+    launch_agent_changed: bool
+    launchctl_applied: bool
 
 
 def create_mcp_info_router(settings: McpSettings) -> APIRouter:
@@ -66,6 +78,28 @@ def create_mcp_info_router(settings: McpSettings) -> APIRouter:
             if is_local
             else "認証キーはローカルからの参照時のみ表示されます。"
             "サーバー上の data/mcp_api_key を確認してください。",
+        )
+
+    @router.post("/persist-env", response_model=PersistEnvResponse)
+    def persist_env_endpoint(request: Request) -> PersistEnvResponse:
+        """キーの環境変数を ~/.zshrc と LaunchAgent に永続化する。
+
+        サーバーが動いているマシンのファイルを書き換えるので、
+        ローカル（loopback）からの要求に限る。
+        """
+        if not is_loopback_client(request):
+            raise HTTPException(
+                status_code=403, detail="This operation is only available from localhost"
+            )
+
+        result = persist_env(settings.api_key, env_var=CODEX_TOKEN_ENV_VAR)
+        return PersistEnvResponse(
+            env_var=result.env_var,
+            zshrc_path=result.zshrc_path,
+            zshrc_changed=result.zshrc_changed,
+            launch_agent_path=result.launch_agent_path,
+            launch_agent_changed=result.launch_agent_changed,
+            launchctl_applied=result.launchctl_applied,
         )
 
     return router

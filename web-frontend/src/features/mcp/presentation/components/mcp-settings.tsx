@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { McpDependencies } from '../../di/mcp-dependencies'
+import type { McpPersistEnvResult } from '../../domain/entities/mcp-persist-env-result'
 import { useMcpConnection } from '../hooks/use-mcp-connection'
 import { CopyableCommand } from './copyable-command'
 import '../mcp.css'
@@ -7,9 +9,44 @@ interface McpSettingsProps {
   dependencies: McpDependencies
 }
 
+function persistResultLines(result: McpPersistEnvResult): string[] {
+  const lines = [
+    result.zshrcChanged
+      ? `${result.zshrcPath} に export を追記・更新しました（新しいターミナルから有効）`
+      : `${result.zshrcPath} は設定済みでした`,
+  ]
+  if (result.launchAgentPath) {
+    lines.push(
+      result.launchAgentChanged
+        ? 'LaunchAgent を登録しました（ログイン時に自動で設定されます）'
+        : 'LaunchAgent は登録済みでした',
+    )
+  }
+  if (result.launchctlApplied) {
+    lines.push('launchctl setenv も実行済みです。あとは Codex / ChatGPT アプリを再起動してください')
+  }
+  return lines
+}
+
 /** MCP クライアントごとの登録方法をまとめた設定セクション。 */
 export function McpSettings({ dependencies }: McpSettingsProps) {
   const { connection, isLoading, error } = useMcpConnection(dependencies)
+  const [isPersisting, setIsPersisting] = useState(false)
+  const [persistResult, setPersistResult] = useState<McpPersistEnvResult | null>(null)
+  const [persistError, setPersistError] = useState<string | null>(null)
+
+  async function persistEnv() {
+    setIsPersisting(true)
+    setPersistError(null)
+    try {
+      setPersistResult(await dependencies.persistMcpEnv.execute())
+    } catch {
+      setPersistResult(null)
+      setPersistError('永続化に失敗しました。サーバーと同じマシンから開いているか確認してください。')
+    } finally {
+      setIsPersisting(false)
+    }
+  }
 
   return (
     <section className="mcp-settings" aria-labelledby="mcp-settings-heading">
@@ -87,19 +124,40 @@ export function McpSettings({ dependencies }: McpSettingsProps) {
             <h3 id="mcp-client-codex">Codex</h3>
             <ol className="mcp-client__steps">
               <li><code>~/.codex/config.toml</code> に下のスニペットを追記する</li>
-              <li>
-                下のコマンドをターミナルに貼り付けて実行する（1 行目は ChatGPT アプリなどの
-                GUI 用、2 行目はターミナル用。ターミナル用は <code>~/.zshrc</code> に
-                追記すると再起動後も有効）
-              </li>
+              <li>「環境変数を永続化」ボタンを押す（キーの環境変数が Mac 再起動後も残るよう設定します）</li>
               <li>Codex / ChatGPT アプリを完全終了して再起動する</li>
             </ol>
             <CopyableCommand label="config.toml に追記" value={connection.codexConfig} />
-            <CopyableCommand
-              label="キーの環境変数を設定"
-              value={connection.codexEnvCommand}
-              secret={connection.apiKey}
-            />
+            {connection.isLocalRequest && (
+              <div className="mcp-persist">
+                <button
+                  type="button"
+                  className="mcp-persist__button"
+                  disabled={isPersisting}
+                  onClick={() => void persistEnv()}
+                >
+                  {isPersisting ? '設定中...' : '環境変数を永続化（~/.zshrc と LaunchAgent に登録）'}
+                </button>
+                {persistResult && (
+                  <ul className="mcp-persist__result" role="status">
+                    {persistResultLines(persistResult).map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+                {persistError && (
+                  <p className="mcp-panel__error" role="alert">{persistError}</p>
+                )}
+              </div>
+            )}
+            <details className="mcp-persist__manual">
+              <summary>手動で設定する場合のコマンド</summary>
+              <CopyableCommand
+                label="キーの環境変数を設定"
+                value={connection.codexEnvCommand}
+                secret={connection.apiKey}
+              />
+            </details>
           </section>
 
           <section className="mcp-client" aria-labelledby="mcp-client-other">

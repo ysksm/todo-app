@@ -1,7 +1,8 @@
 import type { HttpClient } from '@/shared/infrastructure/http/http-client'
 import type { McpConnection } from '../../domain/entities/mcp-connection'
+import type { McpPersistEnvResult } from '../../domain/entities/mcp-persist-env-result'
 import type { McpRepository } from '../../domain/repositories/mcp-repository'
-import type { McpConnectionResponse } from '../api/mcp-api-types'
+import type { McpConnectionResponse, McpPersistEnvResponse } from '../api/mcp-api-types'
 
 export class HttpMcpRepository implements McpRepository {
   private readonly httpClient: HttpClient
@@ -13,6 +14,21 @@ export class HttpMcpRepository implements McpRepository {
   async getConnection(): Promise<McpConnection> {
     const response = await this.httpClient.request<McpConnectionResponse>('/api/mcp/connection')
     return toMcpConnection(response)
+  }
+
+  async persistEnv(): Promise<McpPersistEnvResult> {
+    const response = await this.httpClient.request<McpPersistEnvResponse>(
+      '/api/mcp/persist-env',
+      { method: 'POST' },
+    )
+    return {
+      envVar: response.env_var,
+      zshrcPath: response.zshrc_path,
+      zshrcChanged: response.zshrc_changed,
+      launchAgentPath: response.launch_agent_path,
+      launchAgentChanged: response.launch_agent_changed,
+      launchctlApplied: response.launchctl_applied,
+    }
   }
 }
 
