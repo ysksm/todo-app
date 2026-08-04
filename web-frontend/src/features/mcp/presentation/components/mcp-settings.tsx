@@ -40,11 +40,18 @@ export function McpSettings({ dependencies }: McpSettingsProps) {
           </dl>
 
           {connection.apiKey && (
-            <CopyableCommand
-              label="MCP API キー（認可画面で入力するキー）"
-              value={connection.apiKey}
-              secret={connection.apiKey}
-            />
+            <>
+              <CopyableCommand
+                label="MCP API キー（認可画面で入力するキー）"
+                value={connection.apiKey}
+                secret={connection.apiKey}
+              />
+              <p className="mcp-panel__note" role="note">
+                「コピー」を押すとキーだけがコピーされます。認可画面にはそれを
+                そのまま貼り付けてください（Authorization: などの文字列を手で
+                入力する必要はありません）。
+              </p>
+            </>
           )}
 
           <section className="mcp-client" aria-labelledby="mcp-client-claude-code">

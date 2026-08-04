@@ -54,8 +54,9 @@ PAGE_STYLE = """
   p { margin: 0 0 16px; color: #496053; font-size: 14px; }
   strong { color: #15211c; }
   label { display: block; margin-bottom: 6px; color: #33483b; font-size: 13px; font-weight: 600; }
-  input { width: 100%; box-sizing: border-box; margin-bottom: 16px; padding: 10px;
+  input { width: 100%; box-sizing: border-box; margin-bottom: 8px; padding: 10px;
           border: 1px solid #93a99b; border-radius: 4px; font-size: 14px; }
+  .hint { margin: 0 0 16px; color: #65786b; font-size: 12px; }
   button { width: 100%; padding: 10px; border: 0; border-radius: 4px;
            background: #2f694c; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
   .error { margin-bottom: 16px; padding: 10px 12px; border-left: 3px solid #b06a2c;
@@ -78,6 +79,7 @@ def render_form(transaction_id: str, client_name: str, error: str | None = None)
     <input type="hidden" name="txn" value="{escape_html(transaction_id)}">
     <label for="api-key">MCP API キー</label>
     <input id="api-key" name="api_key" type="password" autocomplete="off" autofocus required>
+    <p class="hint">Todo アプリの 設定 → 「MCP API キー」でコピーしたキーを、そのまま貼り付けてください。</p>
     <button type="submit">許可する</button>
   </form>
 </main></body></html>"""
