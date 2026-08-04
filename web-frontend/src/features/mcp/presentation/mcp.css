@@ -42,10 +42,12 @@
   margin-bottom: 0;
 }
 
-.mcp-client code {
+/* 本文中のインラインコードだけ。.mcp-command__value（黒背景のコード表示）には効かせない。 */
+.mcp-client p code {
   padding: 1px 5px;
   border-radius: 3px;
   background: #eaf0ec;
+  color: #15211c;
   font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
