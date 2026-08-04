@@ -1,5 +1,3 @@
-import type { McpDependencies } from '@/features/mcp/di/mcp-dependencies'
-import { McpPanel } from '@/features/mcp/presentation/components/mcp-panel'
 import type { TodoDependencies } from '../../di/todo-dependencies'
 import {
   TODO_STATUSES,
@@ -20,7 +18,7 @@ import '../mindmap.css'
 
 interface TodoPageProps {
   dependencies: TodoDependencies
-  mcpDependencies: McpDependencies
+  onOpenSettings(): void
 }
 
 const VIEW_MODES: readonly { mode: TodoViewMode; label: string }[] = [
@@ -34,7 +32,7 @@ const STATUS_FILTERS: readonly { status: TodoStatus | null; label: string }[] = 
   ...TODO_STATUSES.map((status) => ({ status, label: TODO_STATUS_LABELS[status] })),
 ]
 
-export function TodoPage({ dependencies, mcpDependencies }: TodoPageProps) {
+export function TodoPage({ dependencies, onOpenSettings }: TodoPageProps) {
   const {
     todos,
     isLoading,
@@ -74,7 +72,12 @@ export function TodoPage({ dependencies, mcpDependencies }: TodoPageProps) {
             <p className="todo-header__eyebrow">TASKS</p>
             <h1 id="todo-heading">Todo</h1>
           </div>
-          <p className="todo-header__count">{doneCount} / {todos.length} 完了</p>
+          <div className="todo-header__side">
+            <p className="todo-header__count">{doneCount} / {todos.length} 完了</p>
+            <button type="button" className="todo-header__settings" onClick={onOpenSettings}>
+              ⚙ 設定
+            </button>
+          </div>
         </header>
 
         <div className="todo-view-switch" role="tablist" aria-label="表示の切り替え">
@@ -175,8 +178,6 @@ export function TodoPage({ dependencies, mcpDependencies }: TodoPageProps) {
             onOpen={openDialog}
           />
         )}
-
-        <McpPanel dependencies={mcpDependencies} />
       </section>
       <TodoDialog
         todo={selectedTodo}

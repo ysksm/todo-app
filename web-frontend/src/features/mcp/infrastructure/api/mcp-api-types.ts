@@ -7,5 +7,6 @@ export interface McpConnectionResponse {
   add_command: string
   client_config: string
   connector_url: string
+  codex_config: string
   note: string | null
 }

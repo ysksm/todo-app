@@ -123,13 +123,24 @@ if a URL leaks.
 
 ### Registering a client
 
-Open the "MCP で連携する" panel in the web UI to copy a ready-made command, or build it
-by hand:
+Open 設定 (the ⚙ button in the web UI header) to copy ready-made commands for each
+client, or build them by hand:
 
 ```sh
+# Claude Code
 claude mcp add --transport http todo-app http://127.0.0.1:8000/mcp \
   --header "Authorization: Bearer $(cat data/mcp_api_key)"
 ```
+
+```toml
+# Codex CLI — append to ~/.codex/config.toml (recent versions support HTTP servers)
+[mcp_servers.todo-app]
+url = "http://127.0.0.1:8000/mcp?key=<the API key>"
+```
+
+ChatGPT: 設定 → コネクタ → 詳細設定で開発者モードを有効にし、「コネクタを作成」に
+`https://<public-host>/mcp?key=<the API key>` を登録する（認証は「なし」を選ぶ。
+Claude アプリと同じく公開 HTTPS が必要 — see "Connecting from the Claude app" below）。
 
 `GET /api/mcp/connection` returns the same information as JSON. **That endpoint is not
 authenticated**, so it only includes the actual key when the request comes from a

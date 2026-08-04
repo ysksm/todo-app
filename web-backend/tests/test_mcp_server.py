@@ -297,10 +297,17 @@ class TestConnectionInfo:
         assert body["is_local_request"] is True
 
     def test_returns_a_connector_url_with_the_key_in_the_query(self, client: TestClient) -> None:
-        """Claude アプリのカスタムコネクタにはヘッダーが無いので ?key= 付き URL を出す。"""
+        """Claude アプリ・ChatGPT のコネクタにはヘッダーが無いので ?key= 付き URL を出す。"""
         body = client.get("/api/mcp/connection").json()
 
         assert body["connector_url"] == f"{body['url']}?key={TEST_API_KEY}"
+
+    def test_returns_a_codex_config_snippet(self, client: TestClient) -> None:
+        body = client.get("/api/mcp/connection").json()
+
+        assert body["codex_config"] == (
+            f'[mcp_servers.todo-app]\nurl = "{body["url"]}?key={TEST_API_KEY}"\n'
+        )
 
     def test_uses_the_public_url_when_configured(
         self, service: TodoService, mcp_settings

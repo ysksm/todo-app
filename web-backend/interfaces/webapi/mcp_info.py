@@ -24,10 +24,12 @@ class McpConnection(BaseModel):
     client_config: str
     """他の MCP クライアント向けの設定 JSON。"""
     connector_url: str
-    """Claude アプリのカスタムコネクタ用 URL。
+    """Claude アプリ・ChatGPT のコネクタ用 URL。
 
-    カスタムコネクタはヘッダーを送れないので、キーを ?key= で URL に載せる。
+    どちらもカスタムヘッダーを送れないので、キーを ?key= で URL に載せる。
     """
+    codex_config: str
+    """Codex CLI 向けの ~/.codex/config.toml スニペット。"""
     note: str | None
 
 
@@ -55,6 +57,7 @@ def create_mcp_info_router(settings: McpSettings) -> APIRouter:
             add_command=build_add_command(settings.server_name, url, key),
             client_config=build_client_config(settings.server_name, url, key),
             connector_url=f"{url}?key={key}",
+            codex_config=build_codex_config(settings.server_name, url, key),
             note=None
             if is_local
             else "認証キーはローカルからの参照時のみ表示されます。"
@@ -69,6 +72,14 @@ def build_add_command(server_name: str, url: str, api_key: str) -> str:
         f"claude mcp add --transport http {server_name} {url} "
         f'--header "Authorization: Bearer {api_key}"'
     )
+
+
+def build_codex_config(server_name: str, url: str, api_key: str) -> str:
+    """Codex CLI の設定スニペット。
+
+    ヘッダー指定に依存しないよう、キーは ?key= で URL に載せる。
+    """
+    return f'[mcp_servers.{server_name}]\nurl = "{url}?key={api_key}"\n'
 
 
 def build_client_config(server_name: str, url: str, api_key: str) -> str:

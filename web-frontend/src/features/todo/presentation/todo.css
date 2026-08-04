@@ -166,6 +166,22 @@
   opacity: 0.55;
 }
 
+.todo-header__side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.todo-header__settings {
+  padding: 6px 12px;
+  border: 1px solid #93a99b;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #33483b;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 .todo-view-switch {
   display: flex;
   gap: 4px;
