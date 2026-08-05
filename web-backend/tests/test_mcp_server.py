@@ -29,8 +29,11 @@ def mcp_server(service: TodoService):
 
 def call_tool(mcp_server, name: str, **arguments: Any) -> Any:
     result = asyncio.run(mcp_server.call_tool(name, arguments))
-    # FastMCP は (コンテンツ, 構造化された結果) を返す。後者だけ使う。
-    structured = result[1] if isinstance(result, tuple) else result
+    # SDK 2.0 は CallToolResult を返す。失敗はテキストを添えて is_error になる。
+    if result.is_error:
+        message = "".join(getattr(content, "text", "") for content in result.content)
+        raise RuntimeError(message)
+    structured = result.structured_content
     return structured.get("result", structured) if isinstance(structured, dict) else structured
 
 
@@ -171,7 +174,10 @@ class TestMcpEndpointAuth:
         response = client.post(self.ENDPOINT, json=self.INITIALIZE, headers=self.HEADERS)
 
         assert response.status_code == 401
-        assert response.headers["WWW-Authenticate"] == "Bearer"
+        # RFC 9728: OAuth 対応クライアントが認可サーバーを発見できるようにする。
+        assert response.headers["WWW-Authenticate"] == (
+            'Bearer resource_metadata="http://127.0.0.1:8000/.well-known/oauth-protected-resource/mcp"'
+        )
 
     def test_rejects_a_wrong_key(self, client: TestClient) -> None:
         response = client.post(
@@ -200,6 +206,27 @@ class TestMcpEndpointAuth:
         )
 
         assert response.status_code == 200
+
+    def test_rejects_a_key_in_the_query_string(self, client: TestClient) -> None:
+        """キーを URL に載せる方式は廃止した。Bearer ヘッダーか OAuth を使う。"""
+        response = client.post(
+            f"{self.ENDPOINT}?key={TEST_API_KEY}",
+            json=self.INITIALIZE,
+            headers=self.HEADERS,
+        )
+
+        assert response.status_code == 401
+
+    def test_redirect_from_the_bare_mount_path_keeps_the_query(self, client: TestClient) -> None:
+        response = client.post(
+            "/mcp?foo=bar",
+            json=self.INITIALIZE,
+            headers=self.HEADERS,
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 307
+        assert response.headers["Location"] == "/mcp/?foo=bar"
 
 
 class TestApiKeyLoading:
@@ -254,6 +281,39 @@ class TestConnectionInfo:
 
         # TestClient は常にローカル扱いなので、判定関数そのものを確認する。
         assert body["is_local_request"] is True
+
+    def test_returns_a_connector_url_without_the_key(self, client: TestClient) -> None:
+        """コネクタ用 URL は素の URL。登録すると OAuth の認可フローが始まる。"""
+        body = client.get("/api/mcp/connection").json()
+
+        assert body["connector_url"] == body["url"]
+        assert TEST_API_KEY not in body["connector_url"]
+
+    def test_returns_a_codex_config_snippet(self, client: TestClient) -> None:
+        body = client.get("/api/mcp/connection").json()
+
+        assert body["codex_config"] == (
+            f'[mcp_servers.todo-app]\nurl = "{body["url"]}"\n'
+            'bearer_token_env_var = "TODO_APP_MCP_TOKEN"\n'
+        )
+        assert body["codex_env_command"] == (
+            f"launchctl setenv TODO_APP_MCP_TOKEN '{TEST_API_KEY}'\n"
+            f"export TODO_APP_MCP_TOKEN='{TEST_API_KEY}'"
+        )
+
+    def test_uses_the_public_url_when_configured(
+        self, service: TodoService, mcp_settings
+    ) -> None:
+        from dataclasses import replace
+
+        from interfaces.webapi.app import create_app
+
+        settings = replace(mcp_settings, public_url="https://todo.example.trycloudflare.com")
+        with TestClient(create_app(settings, todo_service=service)) as public_client:
+            body = public_client.get("/api/mcp/connection").json()
+
+        assert body["url"] == "https://todo.example.trycloudflare.com/mcp"
+        assert body["connector_url"] == "https://todo.example.trycloudflare.com/mcp"
 
 
 def test_non_local_requests_get_a_placeholder_instead_of_the_key() -> None:

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DEFAULT_KEY_FILE = Path(__file__).parent.parent.parent / "data" / "mcp_api_key"
+DEFAULT_OAUTH_STORE_FILE = Path(__file__).parent.parent.parent / "data" / "mcp_oauth.json"
 DEFAULT_MOUNT_PATH = "/mcp"
 DEFAULT_SERVER_NAME = "todo-app"
 
@@ -17,6 +18,20 @@ class McpSettings:
     server_name: str = DEFAULT_SERVER_NAME
     allowed_hosts: tuple[str, ...] = ()
     """DNS リバインディング対策で許可する Host。空なら SDK の既定（localhost のみ）。"""
+    public_url: str | None = None
+    """外部公開時のベース URL（例: https://example.trycloudflare.com）。
+
+    OAuth の issuer と接続情報の表示に使う。None ならローカルの
+    http://127.0.0.1:<PORT> として扱う。
+    """
+    oauth_store_file: Path = DEFAULT_OAUTH_STORE_FILE
+    """OAuth のクライアント登録・トークンを永続化するファイル。"""
+
+    def resolve_public_url(self) -> str:
+        """OAuth の issuer・接続情報に使う確定ベース URL。"""
+        if self.public_url:
+            return self.public_url.rstrip("/")
+        return f"http://127.0.0.1:{os.environ.get('PORT', '8000')}"
 
 
 def load_mcp_settings(key_file: Path | None = None) -> McpSettings:
@@ -25,6 +40,10 @@ def load_mcp_settings(key_file: Path | None = None) -> McpSettings:
         mount_path=os.environ.get("MCP_MOUNT_PATH", DEFAULT_MOUNT_PATH),
         server_name=os.environ.get("MCP_SERVER_NAME", DEFAULT_SERVER_NAME),
         allowed_hosts=parse_allowed_hosts(os.environ.get("MCP_ALLOWED_HOSTS")),
+        public_url=os.environ.get("MCP_PUBLIC_URL", "").rstrip("/") or None,
+        oauth_store_file=Path(
+            os.environ.get("MCP_OAUTH_STORE_FILE") or DEFAULT_OAUTH_STORE_FILE
+        ),
     )
 
 

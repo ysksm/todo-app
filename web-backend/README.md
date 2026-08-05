@@ -114,17 +114,57 @@ The key comes from `MCP_API_KEY`. If that is not set, a key is generated on firs
 and stored in `data/mcp_api_key` (mode `600`, git-ignored) so it survives restarts.
 
 Send it as `Authorization: Bearer <key>` or `X-API-Key: <key>`. Requests without a valid
-key get `401`.
+token get `401`.
+
+### OAuth (for clients that cannot send headers)
+
+The Claude app and ChatGPT connectors cannot set custom headers, so the server also
+implements the MCP authorization spec (OAuth 2.0 with PKCE and dynamic client
+registration, per RFC 8414 / 9728 / 7591):
+
+1. The client hits `/mcp` unauthenticated, gets a `401` with a `WWW-Authenticate`
+   header pointing at `/.well-known/oauth-protected-resource/mcp`.
+2. It discovers the authorization server metadata, registers itself at `/register`,
+   and starts the authorization code flow at `/authorize`.
+3. The browser opens the consent page (`/oauth/consent`) — **enter the MCP API key**
+   there to approve the connection.
+4. The client exchanges the code at `/token` and calls `/mcp` with the issued
+   Bearer token. Tokens are refreshed automatically via `refresh_token`.
+
+Issued tokens and client registrations are persisted in `data/mcp_oauth.json`
+(git-ignored) so they survive `--reload` restarts. The OAuth issuer URL is
+`MCP_PUBLIC_URL` (falling back to `http://127.0.0.1:<PORT>`), so **set
+`MCP_PUBLIC_URL` when serving through a tunnel**.
 
 ### Registering a client
 
-Open the "MCP で連携する" panel in the web UI to copy a ready-made command, or build it
-by hand:
+Open 設定 (the ⚙ button in the web UI header) to copy ready-made commands for each
+client, or build them by hand:
 
 ```sh
+# Claude Code
 claude mcp add --transport http todo-app http://127.0.0.1:8000/mcp \
   --header "Authorization: Bearer $(cat data/mcp_api_key)"
 ```
+
+```toml
+# Codex — append to ~/.codex/config.toml (recent versions support HTTP servers)
+[mcp_servers.todo-app]
+url = "http://127.0.0.1:8000/mcp"
+bearer_token_env_var = "TODO_APP_MCP_TOKEN"
+```
+
+```sh
+# Codex reads the key from that environment variable:
+launchctl setenv TODO_APP_MCP_TOKEN "$(cat data/mcp_api_key)"   # for GUI apps (ChatGPT app)
+export TODO_APP_MCP_TOKEN="$(cat data/mcp_api_key)"             # for the terminal (add to ~/.zshrc)
+# then fully quit and restart Codex / the ChatGPT app
+```
+
+ChatGPT: 設定 → コネクタ → 詳細設定で開発者モードを有効にし、「コネクタを作成」に
+`https://<public-host>/mcp` を登録する（認証は「OAuth」を選ぶ）。接続時に開く
+承認画面で MCP API キーを入力する。Claude アプリと同じく公開 HTTPS が必要
+（see "Connecting from the Claude app" below）。
 
 `GET /api/mcp/connection` returns the same information as JSON. **That endpoint is not
 authenticated**, so it only includes the actual key when the request comes from a
@@ -138,6 +178,61 @@ running with `HOST=0.0.0.0`, list the hostnames clients will use:
 ```sh
 MCP_ALLOWED_HOSTS=todo.example.com,192.168.1.10:8000 ./start.sh
 ```
+
+### HTTPS
+
+`start.sh` terminates TLS itself when both `SSL_CERTFILE` and `SSL_KEYFILE` are set.
+For local certificates, [mkcert](https://github.com/FiloSottile/mkcert) is the easiest:
+
+```sh
+mkcert -install
+mkcert localhost 127.0.0.1
+SSL_CERTFILE=./localhost+1.pem SSL_KEYFILE=./localhost+1-key.pem ./start.sh
+# → https://127.0.0.1:8000
+```
+
+Behind a tunnel or reverse proxy, leave TLS to the proxy. `start.sh` passes
+`--proxy-headers`, so `X-Forwarded-Proto` / `Host` from the proxy are used to build the
+URLs shown by `GET /api/mcp/connection`. If those headers are not forwarded correctly,
+set `MCP_PUBLIC_URL=https://your-host` to override the displayed base URL.
+
+### Connecting from the Claude app (custom connector)
+
+The Claude app (claude.ai / desktop) connects to remote MCP servers from Anthropic's
+infrastructure, so it needs a **publicly reachable HTTPS URL** with a valid certificate —
+a self-signed localhost cert is not enough. The quickest way is a tunnel:
+
+```sh
+# terminal 1: the backend
+./start.sh
+
+# terminal 2: a tunnel (no account needed for a quick try)
+cloudflared tunnel --url http://127.0.0.1:8000
+# → prints https://<random>.trycloudflare.com
+```
+
+Then:
+
+1. Restart the backend with the tunnel host allowed and the public URL set
+   (`MCP_PUBLIC_URL` is required here — it becomes the OAuth issuer):
+
+   ```sh
+   MCP_ALLOWED_HOSTS=<random>.trycloudflare.com \
+   MCP_PUBLIC_URL=https://<random>.trycloudflare.com ./start.sh
+   ```
+
+2. In the Claude app: 設定 → コネクタ → 「カスタムコネクタを追加」 and paste
+
+   ```
+   https://<random>.trycloudflare.com/mcp
+   ```
+
+3. When the connector first connects, a consent page opens in the browser —
+   enter the MCP API key there to approve it. Custom connectors cannot send
+   custom headers, which is why authentication happens via OAuth instead.
+
+Stop the tunnel when you are done. To cut off previously authorized connectors,
+delete `data/mcp_oauth.json` (issued tokens) and `data/mcp_api_key` (the key).
 
 ## CLI
 
