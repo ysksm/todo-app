@@ -64,7 +64,8 @@ class McpAuthMiddleware:
         presented = extract_bearer_token(headers)
         if presented is None:
             return False
-        if secrets.compare_digest(presented, self.api_key):
+        # str どうしの compare_digest は非 ASCII で TypeError になるので bytes で比べる。
+        if secrets.compare_digest(presented.encode(), self.api_key.encode()):
             return True
         return await self.token_loader(presented) is not None
 

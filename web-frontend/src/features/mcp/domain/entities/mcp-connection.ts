@@ -10,7 +10,7 @@ export interface McpConnection {
   readonly addCommand: string
   /** 他の MCP クライアント向けの設定 JSON。 */
   readonly clientConfig: string
-  /** Claude アプリ・ChatGPT のコネクタ用 URL（ヘッダー不要、キーは ?key= で URL に載る）。 */
+  /** Claude アプリ・ChatGPT のコネクタ用 URL。登録すると OAuth の認可フローが始まる。 */
   readonly connectorUrl: string
   /** Codex 向けの ~/.codex/config.toml スニペット。キーは環境変数で渡す。 */
   readonly codexConfig: string

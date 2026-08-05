@@ -12,6 +12,16 @@ from starlette.responses import HTMLResponse, RedirectResponse
 
 from interfaces.mcp.oauth import ConsentError, TodoOAuthProvider
 
+# 承認画面を iframe に埋めて許可を騙し取られない（クリックジャッキング）ようにする。
+CONSENT_PAGE_HEADERS = {
+    "X-Frame-Options": "DENY",
+    "Content-Security-Policy": "frame-ancestors 'none'",
+}
+
+
+def consent_page(html: str, status_code: int = 200) -> HTMLResponse:
+    return HTMLResponse(html, status_code=status_code, headers=CONSENT_PAGE_HEADERS)
+
 
 def create_consent_router(provider: TodoOAuthProvider) -> APIRouter:
     router = APIRouter(prefix="/oauth", tags=["oauth"])
@@ -21,8 +31,8 @@ def create_consent_router(provider: TodoOAuthProvider) -> APIRouter:
         try:
             client_name = provider.transaction_client_name(txn)
         except ConsentError as error:
-            return HTMLResponse(render_error(str(error)), status_code=400)
-        return HTMLResponse(render_form(txn, client_name))
+            return consent_page(render_error(str(error)), status_code=400)
+        return consent_page(render_form(txn, client_name))
 
     @router.post("/consent", include_in_schema=False, response_model=None)
     def submit_consent(
@@ -36,8 +46,8 @@ def create_consent_router(provider: TodoOAuthProvider) -> APIRouter:
             try:
                 client_name = provider.transaction_client_name(txn)
             except ConsentError:
-                return HTMLResponse(render_error(str(error)), status_code=400)
-            return HTMLResponse(render_form(txn, client_name, error=str(error)), status_code=401)
+                return consent_page(render_error(str(error)), status_code=400)
+            return consent_page(render_form(txn, client_name, error=str(error)), status_code=401)
         # 303 で認可コード付きの redirect_uri（クライアント側）へ戻す。
         return RedirectResponse(redirect_url, status_code=303)
 

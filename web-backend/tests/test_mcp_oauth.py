@@ -285,3 +285,29 @@ class TestOAuthFlow:
 
         assert response.status_code == 400
         assert "無効" in response.text
+
+    def test_an_invalid_transaction_does_not_reveal_whether_the_key_was_right(
+        self, client: TestClient
+    ) -> None:
+        """無効なリクエストからキーの正誤を推測できないよう、txn を先に検証する。"""
+        with_wrong_key = client.post(
+            "/oauth/consent", data={"txn": "unknown", "api_key": "wrong"}, follow_redirects=False
+        )
+        with_right_key = client.post(
+            "/oauth/consent",
+            data={"txn": "unknown", "api_key": TEST_API_KEY},
+            follow_redirects=False,
+        )
+
+        assert with_wrong_key.status_code == with_right_key.status_code == 400
+        assert "無効" in with_wrong_key.text and "無効" in with_right_key.text
+
+    def test_the_consent_page_cannot_be_framed(self, client: TestClient) -> None:
+        """クリックジャッキングで承認を騙し取られないようにする。"""
+        client_id = register_client(client)
+        consent_url = request_authorization(client, client_id)
+
+        response = client.get(consent_url)
+
+        assert response.headers["X-Frame-Options"] == "DENY"
+        assert response.headers["Content-Security-Policy"] == "frame-ancestors 'none'"

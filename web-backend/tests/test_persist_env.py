@@ -29,14 +29,18 @@ def test_appends_a_marked_block_to_a_fresh_zshrc(tmp_path: Path) -> None:
     assert f"export {ENV_VAR}='key-1'" in content
 
 
-def test_keeps_existing_zshrc_content(tmp_path: Path) -> None:
-    (tmp_path / ".zshrc").write_text("alias ll='ls -la'\n", encoding="utf-8")
+def test_keeps_existing_zshrc_content_and_permissions(tmp_path: Path) -> None:
+    zshrc = tmp_path / ".zshrc"
+    zshrc.write_text("alias ll='ls -la'\n", encoding="utf-8")
+    zshrc.chmod(0o644)
 
     persist_env("key-1", env_var=ENV_VAR, home=tmp_path)
 
     content = read_zshrc(tmp_path)
     assert content.startswith("alias ll='ls -la'\n")
     assert f"export {ENV_VAR}='key-1'" in content
+    # 既存の dotfile のパーミッションは変えない
+    assert (zshrc.stat().st_mode & 0o777) == 0o644
 
 
 def test_is_idempotent_and_replaces_the_block_on_key_rotation(tmp_path: Path) -> None:

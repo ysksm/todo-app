@@ -101,18 +101,22 @@ class TodoOAuthProvider:
         return transaction.get("client_name") or transaction["client_id"]
 
     def complete_consent(self, transaction_id: str, presented_key: str) -> str:
-        """API キーを検証し、認可コードを発行してクライアントへのリダイレクト URL を返す。"""
-        if not secrets.compare_digest(presented_key, self.api_key):
-            raise ConsentError("API キーが正しくありません。")
+        """API キーを検証し、認可コードを発行してクライアントへのリダイレクト URL を返す。
 
+        トランザクションを先に検証する。逆順にすると、無効なリクエストでも
+        キーの正誤が応答から分かってしまう（キー当ての手がかりになる）。
+        """
         with self._lock:
             store = self._read()
-            transaction = store["transactions"].pop(transaction_id, None)
+            transaction = store["transactions"].get(transaction_id)
             if transaction is None or transaction["expires_at"] < time.time():
-                self._write(store)
                 raise ConsentError(
                     "この承認リクエストは無効か、期限切れです。クライアントから接続し直してください。"
                 )
+            # 間違ったキーではトランザクションを消費しない（正しいキーでやり直せる）。
+            if not secrets.compare_digest(presented_key.encode(), self.api_key.encode()):
+                raise ConsentError("API キーが正しくありません。")
+            store["transactions"].pop(transaction_id)
 
             code = secrets.token_urlsafe(32)
             store["codes"][code] = {

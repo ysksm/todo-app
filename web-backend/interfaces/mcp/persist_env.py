@@ -70,7 +70,8 @@ def persist_env(api_key: str, env_var: str, home: Path | None = None) -> Persist
 
 def _upsert_marked_block(path: Path, block: str) -> bool:
     """マーカーで囲んだブロックを追記・置換する。変更が無ければ False。"""
-    existing = path.read_text(encoding="utf-8") if path.exists() else ""
+    existed = path.exists()
+    existing = path.read_text(encoding="utf-8") if existed else ""
 
     if ZSHRC_BEGIN in existing and ZSHRC_END in existing:
         head, _, rest = existing.partition(ZSHRC_BEGIN)
@@ -87,7 +88,9 @@ def _upsert_marked_block(path: Path, block: str) -> bool:
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(updated, encoding="utf-8")
-    path.chmod(0o600)
+    # 既存の dotfile のパーミッションは尊重し、新規作成時だけ絞る。
+    if not existed:
+        path.chmod(0o600)
     return True
 
 
