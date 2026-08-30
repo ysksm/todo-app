@@ -1,0 +1,50 @@
+<%= form_with model: todo, class: "todo-form" do |f| %>
+  <% if todo.errors.any? %>
+    <div class="form-errors">
+      <ul>
+        <% todo.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <%= f.hidden_field :parent_id %>
+
+  <% if todo.parent %>
+    <p class="parent-info">
+      親: <span class="type-badge type-<%= todo.parent.todo_type %>"><%= todo_type_label(todo.parent.todo_type) %></span>
+      <%= todo.parent.title %>
+    </p>
+  <% else %>
+    <p class="parent-info">ルート（親なし）</p>
+  <% end %>
+
+  <div class="field">
+    <%= f.label :todo_type, "種類" %>
+    <%
+      types = todo.parent ? todo.parent.allowed_child_types : Todo::TYPES
+    %>
+    <%= f.select :todo_type, todo_type_options(types) %>
+  </div>
+
+  <div class="field">
+    <%= f.label :title, "タイトル" %>
+    <%= f.text_field :title, autofocus: true %>
+  </div>
+
+  <div class="field">
+    <%= f.label :description, "説明" %>
+    <%= f.text_area :description, rows: 4 %>
+  </div>
+
+  <div class="field">
+    <%= f.label :status, "状態" %>
+    <%= f.select :status, todo_status_options %>
+  </div>
+
+  <div class="form-actions">
+    <%= f.submit todo.new_record? ? "作成" : "更新", class: "btn btn-primary" %>
+    <%= link_to "キャンセル", todos_path, class: "btn" %>
+  </div>
+<% end %>

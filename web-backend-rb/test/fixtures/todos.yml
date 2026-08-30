@@ -1,0 +1,33 @@
+project_alpha:
+  title: アプリを作る
+  todo_type: project
+  status: open
+  position: 0
+
+epic_backend:
+  title: バックエンドを作る
+  todo_type: epic
+  status: open
+  parent: project_alpha
+  position: 0
+
+story_crud:
+  title: TODO を CRUD できる
+  todo_type: user_story
+  status: in_progress
+  parent: epic_backend
+  position: 0
+
+task_model:
+  title: モデルを作る
+  todo_type: task
+  status: done
+  parent: story_crud
+  position: 0
+
+subtask_migration:
+  title: マイグレーションを書く
+  todo_type: task
+  status: done
+  parent: task_model
+  position: 0
