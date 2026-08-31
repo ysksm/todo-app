@@ -710,9 +710,14 @@ h1 { font-size: 1.4rem; }
   color: var(--color-muted);
 }
 
-.tree-table-toggle { width: 2.5rem; text-align: center; }
+/* ツリー列: 行の左端からインデントし、チェック・種類バッジ・タイトルを 1 まとまりで置く */
+.tree-cell { width: 55%; }
 
-.tree-indent { display: inline-flex; align-items: center; gap: 0.35rem; }
+.tree-cell-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
 
 .tree-marker { color: #cbd5e1; font-size: 0.8rem; }
 
