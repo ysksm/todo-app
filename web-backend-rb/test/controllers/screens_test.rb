@@ -9,6 +9,20 @@ class ScreensTest < ActionDispatch::IntegrationTest
     assert_select ".mm-card", minimum: 1
   end
 
+  test "マインドマップは id を指定するとそのチケットの配下だけを表示する" do
+    epic = todos(:epic_backend)
+    get mindmap_path(epic)
+    assert_response :success
+    assert_includes response.body, epic.title
+    assert_includes response.body, todos(:story_crud).title      # 配下は表示される
+    assert_not_includes response.body, "＋ ルートに追加"          # 全体用の追加ボタンは出ない
+  end
+
+  test "部分マインドマップは存在しない id で 404" do
+    get mindmap_path(999_999)
+    assert_response :not_found
+  end
+
   test "ブラウズのプロジェクト一覧が表示できる" do
     get browse_path
     assert_response :success
@@ -20,6 +34,20 @@ class ScreensTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".breadcrumb"
     assert_select ".browse-card", minimum: 1
+  end
+
+  test "ブラウズは view=list でリスト表示になる" do
+    get browse_path(view: "list")
+    assert_response :success
+    assert_select ".browse-list-row", minimum: 1
+    assert_select ".browse-card", count: 0
+  end
+
+  test "ブラウズの掘り下げ画面も view=list でリスト表示になる" do
+    get browse_todo_path(todos(:project_alpha), view: "list")
+    assert_response :success
+    assert_select ".browse-list-row", minimum: 1
+    assert_select ".browse-card", count: 0
   end
 
   test "ブラウズは存在しない id で 404" do

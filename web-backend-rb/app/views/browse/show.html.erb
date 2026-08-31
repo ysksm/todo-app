@@ -1,8 +1,9 @@
+<% view_param = (@view if @view == "list") %>
 <nav class="breadcrumb">
-  <%= link_to "プロジェクト一覧", browse_path %>
+  <%= link_to "プロジェクト一覧", browse_path(view: view_param) %>
   <% @ancestors.each do |ancestor| %>
     <span class="breadcrumb-sep">›</span>
-    <%= link_to ancestor.title, browse_todo_path(ancestor) %>
+    <%= link_to ancestor.title, browse_todo_path(ancestor, view: view_param) %>
   <% end %>
   <span class="breadcrumb-sep">›</span>
   <span class="breadcrumb-current"><%= @todo.title %></span>
@@ -13,9 +14,10 @@
     <span class="type-badge type-<%= @todo.todo_type %>"><%= todo_type_label(@todo.todo_type) %></span>
     <%= @todo.title %>
   </h1>
-  <div>
+  <div class="page-header-actions">
+    <%= render "browse/view_toggle", path_options: { controller: "browse", action: "show", id: @todo.id } %>
     <%= link_to "詳細・リンク", todo_path(@todo), class: "btn" %>
-    <%= link_to "マインドマップ", mindmap_path(anchor: "todo-#{@todo.id}"), class: "btn" %>
+    <%= link_to "マインドマップ", mindmap_path(@todo), class: "btn" %>
     <%= link_to "編集", edit_todo_path(@todo, return_to: browse_todo_path(@todo)), class: "btn" %>
   </div>
 </div>
@@ -64,9 +66,7 @@
   <% Todo::TYPES.each do |type| %>
     <% next unless groups.key?(type) %>
     <h2 class="browse-section-title"><%= todo_type_label(type) %>（<%= groups[type].size %>）</h2>
-    <div class="card-grid">
-      <%= render partial: "browse/card", collection: groups[type], as: :todo %>
-    </div>
+    <%= render "browse/items", items: groups[type] %>
   <% end %>
 <% end %>
 

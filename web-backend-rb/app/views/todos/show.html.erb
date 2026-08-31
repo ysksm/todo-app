@@ -123,6 +123,6 @@
   <% end %>
   <%= link_to "編集", edit_todo_path(@todo, return_to: todo_path(@todo)), class: "btn" %>
   <%= link_to "ブラウズで掘り下げ", browse_todo_path(@todo), class: "btn" %>
-  <%= link_to "マインドマップで見る", mindmap_path(anchor: "todo-#{@todo.id}"), class: "btn" %>
+  <%= link_to "マインドマップで見る", mindmap_path(@todo), class: "btn" %>
   <%= link_to "一覧へ戻る", todos_path, class: "btn" %>
 </div>

@@ -1,0 +1,10 @@
+<%# items を現在の表示モード（@view: card / list）で描画する %>
+<% if @view == "list" %>
+  <ul class="browse-list">
+    <%= render partial: "browse/list_item", collection: items, as: :todo %>
+  </ul>
+<% else %>
+  <div class="card-grid">
+    <%= render partial: "browse/card", collection: items, as: :todo %>
+  </div>
+<% end %>

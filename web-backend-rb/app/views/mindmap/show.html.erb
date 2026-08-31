@@ -1,11 +1,30 @@
 <% content_for :container_class, "container-full" %>
 
 <div class="page-header">
-  <h1>マインドマップ</h1>
-  <%= render "mindmap/add_form", parent: nil, todo: Todo.new(todo_type: "project"), open: false %>
+  <% if @root_todo %>
+    <h1>
+      マインドマップ:
+      <span class="type-badge type-<%= @root_todo.todo_type %>"><%= todo_type_label(@root_todo.todo_type) %></span>
+      <%= @root_todo.title %>
+    </h1>
+    <div>
+      <% if @root_todo.parent %>
+        <%= link_to "↑ ひとつ上のマップ", mindmap_path(@root_todo.parent), class: "btn" %>
+      <% end %>
+      <%= link_to "全体マップ", mindmap_path(anchor: "todo-#{@root_todo.id}"), class: "btn" %>
+      <%= link_to "詳細へ戻る", todo_path(@root_todo), class: "btn" %>
+    </div>
+  <% else %>
+    <h1>マインドマップ</h1>
+    <%= render "mindmap/add_form", parent: nil, todo: Todo.new(todo_type: "project"), open: false %>
+  <% end %>
 </div>
 
-<p class="hint">ブレスト用の俯瞰ビューです。タイトルで詳細へ、「▤」でブラウズへ掘り下げ、「＋」で画面遷移せずに子をその場に追加できます。</p>
+<% if @root_todo %>
+  <p class="hint">このチケットとその配下だけを表示しています。「＋」で画面遷移せずに子をその場に追加できます。</p>
+<% else %>
+  <p class="hint">ブレスト用の俯瞰ビューです。タイトルで詳細へ、「▤」でブラウズへ掘り下げ、「＋」で画面遷移せずに子をその場に追加できます。</p>
+<% end %>
 
 <% if @roots.empty? %>
   <p class="empty">まだ TODO がありません。「＋ ルートに追加」から作成してください。</p>

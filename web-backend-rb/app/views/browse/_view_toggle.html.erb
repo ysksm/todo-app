@@ -1,0 +1,7 @@
+<%# カード表示とリスト表示の切り替え。path_options には現在のページのパラメータを渡す %>
+<span class="view-toggle">
+  <%= link_to "カード", url_for(path_options.merge(view: nil)),
+        class: "view-toggle-btn #{'is-active' if @view == 'card'}" %>
+  <%= link_to "リスト", url_for(path_options.merge(view: "list")),
+        class: "view-toggle-btn #{'is-active' if @view == 'list'}" %>
+</span>

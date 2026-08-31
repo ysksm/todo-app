@@ -11,7 +11,7 @@ Rails.application.routes.draw do
     resources :links, controller: :todo_links, only: %i[create destroy]
   end
 
-  get "mindmap", to: "mindmap#show", as: :mindmap
+  get "mindmap(/:id)", to: "mindmap#show", as: :mindmap
   get "browse", to: "browse#index", as: :browse
   get "browse/:id", to: "browse#show", as: :browse_todo
   get "work", to: "work#index", as: :work
