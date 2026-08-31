@@ -23,6 +23,19 @@ class Todo < ApplicationRecord
   scope :roots, -> { where(parent_id: nil) }
   scope :ordered, -> { order(:position, :id) }
 
+  # 全 TODO を 1 クエリで読み、children をメモリ上で紐付けたルート一覧を返す。
+  # 再帰描画（ツリー表示・API の tree）でノードごとにクエリが走るのを防ぐ。
+  def self.tree_roots
+    todos = ordered.to_a
+    by_parent = todos.group_by(&:parent_id)
+    todos.each do |todo|
+      association = todo.association(:children)
+      association.target = by_parent.fetch(todo.id, [])
+      association.loaded!
+    end
+    by_parent.fetch(nil, [])
+  end
+
   validates :title, presence: true
   validates :todo_type, inclusion: { in: TYPES }
   validates :status, inclusion: { in: STATUSES }

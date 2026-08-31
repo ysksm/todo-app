@@ -18,7 +18,7 @@ module Api
     end
 
     def tree
-      render json: Todo.roots.ordered.map { |t| tree_json(t) }
+      render json: Todo.tree_roots.map { |t| tree_json(t) }
     end
 
     def show
@@ -56,7 +56,7 @@ module Api
     end
 
     def todo_params
-      params.require(:todo).permit(:title, :description, :todo_type, :status, :parent_id, :position)
+      params.require(:todo).permit(:title, :description, :todo_type, :status, :parent_id)
     end
 
     def render_errors(todo)

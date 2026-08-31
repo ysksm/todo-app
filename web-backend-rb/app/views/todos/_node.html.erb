@@ -1,8 +1,9 @@
 <li class="todo-node">
   <div class="todo-row <%= "is-done" if todo.done? %>">
+    <% toggle_label = todo.done? ? "「#{todo.title}」を未着手に戻す" : "「#{todo.title}」を完了にする" %>
     <%= button_to "✓", toggle_todo_path(todo), method: :patch,
           class: "toggle #{'toggled' if todo.done?}",
-          title: todo.done? ? "未着手に戻す" : "完了にする" %>
+          title: toggle_label, "aria-label": toggle_label, "aria-pressed": todo.done? %>
     <span class="type-badge type-<%= todo.todo_type %>"><%= todo_type_label(todo.todo_type) %></span>
     <%= link_to todo.title, todo_path(todo), class: "todo-title" %>
     <span class="status status-<%= todo.status %>"><%= todo_status_label(todo.status) %></span>

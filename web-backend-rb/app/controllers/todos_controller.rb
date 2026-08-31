@@ -2,7 +2,7 @@ class TodosController < ApplicationController
   before_action :set_todo, only: %i[show edit update destroy toggle]
 
   def index
-    @roots = Todo.roots.ordered.includes(:children)
+    @roots = Todo.tree_roots
   end
 
   def show
