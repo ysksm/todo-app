@@ -1,0 +1,51 @@
+<div class="page-header">
+  <h1>カレンダー</h1>
+  <div class="calendar-nav">
+    <%= link_to "◀ 前月", calendar_path(month: (@month - 1.month).strftime("%Y-%m")), class: "btn" %>
+    <span class="calendar-month"><%= @month.strftime("%Y年%-m月") %></span>
+    <%= link_to "今月", calendar_path, class: "btn" %>
+    <%= link_to "次月 ▶", calendar_path(month: (@month + 1.month).strftime("%Y-%m")), class: "btn" %>
+  </div>
+</div>
+
+<p class="hint">目標予定日を設定した TODO を月ごとに表示します。</p>
+
+<table class="calendar-table">
+  <thead>
+    <tr>
+      <% %w[日 月 火 水 木 金 土].each do |day| %>
+        <th><%= day %></th>
+      <% end %>
+    </tr>
+  </thead>
+  <tbody>
+    <% @weeks.each do |week| %>
+      <tr>
+        <% week.each do |date| %>
+          <td class="calendar-cell <%= 'is-other-month' unless date.month == @month.month %> <%= 'is-today' if date == Date.current %>">
+            <div class="calendar-date"><%= date.day %></div>
+            <% (@todos_by_date[date] || []).each do |todo| %>
+              <%= link_to todo_path(todo), class: "calendar-chip type-bg-#{todo.todo_type} #{'is-done' if todo.done?}", title: "#{todo_type_label(todo.todo_type)}: #{todo.title}" do %>
+                <%= todo.title %>
+              <% end %>
+            <% end %>
+          </td>
+        <% end %>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<% if @overdue.any? %>
+  <h2 class="work-section-title">期日超過（<%= @overdue.size %>）</h2>
+  <ul class="overdue-list">
+    <% @overdue.each do |todo| %>
+      <li>
+        <span class="due-date is-overdue"><%= format_target_date(todo.target_date) %></span>
+        <span class="type-badge type-<%= todo.todo_type %>"><%= todo_type_label(todo.todo_type) %></span>
+        <%= link_to todo.title, todo_path(todo) %>
+        <span class="status status-<%= todo.status %>"><%= todo_status_label(todo.status) %></span>
+      </li>
+    <% end %>
+  </ul>
+<% end %>

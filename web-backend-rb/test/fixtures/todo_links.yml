@@ -1,0 +1,4 @@
+migration_relates_story:
+  source: subtask_migration
+  target: story_crud
+  link_type: relates_to

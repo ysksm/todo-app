@@ -26,8 +26,15 @@
   <body>
     <header class="site-header">
       <%= link_to "TODO アプリ", root_path, class: "site-title" %>
+      <nav class="site-nav">
+        <%= link_to "ツリー", root_path, class: "nav-link #{'is-active' if current_page?(root_path)}" %>
+        <%= link_to "マインドマップ", mindmap_path, class: "nav-link #{'is-active' if current_page?(mindmap_path)}" %>
+        <%= link_to "ブラウズ", browse_path, class: "nav-link #{'is-active' if request.path.start_with?('/browse')}" %>
+        <%= link_to "作業", work_path, class: "nav-link #{'is-active' if current_page?(work_path)}" %>
+        <%= link_to "カレンダー", calendar_path, class: "nav-link #{'is-active' if current_page?(calendar_path)}" %>
+      </nav>
     </header>
-    <main class="container">
+    <main class="container <%= yield :container_class %>">
       <% flash.each do |kind, message| %>
         <div class="flash flash-<%= kind %>"><%= message %></div>
       <% end %>

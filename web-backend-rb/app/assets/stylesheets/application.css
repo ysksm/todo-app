@@ -26,6 +26,10 @@ body {
 .site-header {
   background: #0f172a;
   padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
 }
 
 .site-title {
@@ -35,11 +39,31 @@ body {
   font-size: 1.1rem;
 }
 
+.site-nav {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.nav-link {
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+}
+
+.nav-link:hover { background: #1e293b; color: #fff; }
+.nav-link.is-active { background: #334155; color: #fff; }
+
 .container {
-  max-width: 900px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: 1.5rem;
 }
+
+/* マインドマップなど、画面幅を最大限使いたいページ用 */
+.container-full { max-width: none; }
 
 .page-header {
   display: flex;
@@ -229,3 +253,536 @@ h1 { font-size: 1.4rem; }
 .todo-detail dd { margin-left: 0; }
 
 .empty { color: var(--color-muted); }
+
+.hint { color: var(--color-muted); font-size: 0.85rem; }
+
+.muted { color: var(--color-muted); font-size: 0.8rem; }
+
+/* --- 優先度・期日・ブロックのバッジ --- */
+
+.priority-badge {
+  font-size: 0.7rem;
+  font-weight: bold;
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.priority-high { background: #fee2e2; color: #b91c1c; }
+.priority-medium { background: #e2e8f0; color: #475569; }
+.priority-low { background: #f1f5f9; color: #94a3b8; }
+
+.due-date {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.due-date.is-overdue { color: #dc2626; font-weight: bold; }
+
+.blocked-badge {
+  font-size: 0.7rem;
+  font-weight: bold;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+  white-space: nowrap;
+}
+
+.field-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.field-row .field { flex: 1; }
+
+.field input[type="number"],
+.field input[type="date"] {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+/* --- 予定・実績テーブル --- */
+
+.metrics-table {
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 0.85rem;
+  margin: 0.5rem 0;
+}
+
+.metrics-table th,
+.metrics-table td {
+  border: 1px solid var(--color-border);
+  padding: 0.35rem 0.85rem;
+  text-align: right;
+}
+
+.metrics-table th { background: #f1f5f9; font-weight: 600; text-align: left; }
+
+/* --- リンク（関連・依存） --- */
+
+.link-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.25rem 0;
+}
+
+.link-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.link-kind {
+  font-size: 0.7rem;
+  font-weight: bold;
+  border-radius: 4px;
+  padding: 0.1rem 0.45rem;
+  white-space: nowrap;
+}
+
+.link-depends { background: #ffedd5; color: #9a3412; }
+.link-depended { background: #dbeafe; color: #1e40af; }
+.link-related { background: #f3e8ff; color: #6b21a8; }
+
+.link-form {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.link-form select {
+  padding: 0.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-family: inherit;
+  max-width: 22rem;
+}
+
+.link-form .hint { flex-basis: 100%; margin: 0.25rem 0 0; }
+
+/* --- マインドマップ --- */
+
+.mindmap-scroll { overflow-x: auto; padding-bottom: 1rem; }
+
+.mindmap { display: inline-block; min-width: 100%; }
+
+.mm-children {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: 0;
+  padding-left: 2rem;
+}
+
+.mm-children.mm-root { padding-left: 0; }
+
+/* 子がいないノードの空の受け皿は非表示（Turbo Stream での追記先として常に置いてある） */
+.mm-children:empty { display: none; }
+
+.mm-node {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 0.25rem 0;
+}
+
+/* 親カードから伸びてくる横線 */
+.mm-children:not(.mm-root) > .mm-node::before {
+  content: "";
+  position: absolute;
+  left: -2rem;
+  width: 2rem;
+  height: 2px;
+  background: var(--color-border);
+}
+
+/* 兄弟をつなぐ縦線 */
+.mm-children:not(.mm-root) > .mm-node::after {
+  content: "";
+  position: absolute;
+  left: -2rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-border);
+}
+
+.mm-children:not(.mm-root) > .mm-node:first-child::after { top: 50%; }
+.mm-children:not(.mm-root) > .mm-node:last-child::after { bottom: 50%; }
+.mm-children:not(.mm-root) > .mm-node:only-child::after { display: none; }
+
+.mm-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mm-card.is-done { opacity: 0.55; }
+.mm-card.is-done .mm-title { text-decoration: line-through; }
+
+.type-border-project { border-left-color: var(--color-project); }
+.type-border-epic { border-left-color: var(--color-epic); }
+.type-border-feature { border-left-color: var(--color-feature); }
+.type-border-user_story { border-left-color: var(--color-user_story); }
+.type-border-task { border-left-color: var(--color-task); }
+
+.mm-title {
+  color: var(--color-text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.mm-title:hover { text-decoration: underline; }
+
+.mm-action {
+  color: var(--color-muted);
+  text-decoration: none;
+  font-weight: bold;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  width: 1.3rem;
+  height: 1.3rem;
+  line-height: 1.2rem;
+  text-align: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.mm-action:hover { background: #f1f5f9; }
+
+/* --- マインドマップのその場追加ポップオーバー --- */
+
+.mm-add-details { position: relative; display: inline-block; flex-shrink: 0; }
+
+.mm-add-details > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-block;
+  user-select: none;
+}
+
+.mm-add-details > summary::-webkit-details-marker { display: none; }
+
+.mm-add-details[open] > summary.mm-add {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #fff;
+}
+
+.mm-popover {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 20;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+  padding: 0.6rem 0.75rem;
+  min-width: 20rem;
+}
+
+.mm-add-form {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.mm-add-form select,
+.mm-add-form input[type="text"] {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+.mm-add-form input[type="text"] { flex: 1; min-width: 9rem; }
+
+.mm-add-form .btn { font-size: 0.85rem; padding: 0.3rem 0.8rem; }
+
+.mm-form-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.8rem;
+}
+
+/* --- ブラウズ（ドリルダウン） --- */
+
+.breadcrumb {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.breadcrumb a { color: var(--color-muted); }
+.breadcrumb-current { color: var(--color-text); font-weight: 600; }
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0 1.25rem;
+}
+
+.browse-card {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.browse-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.browse-card-title {
+  color: var(--color-text);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.browse-card-title:hover { text-decoration: underline; }
+
+.browse-card-goal {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.browse-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #16a34a;
+  border-radius: 999px;
+}
+
+.browse-detail {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.browse-goal { margin: 0 0 0.5rem; }
+
+.browse-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.browse-section-title {
+  font-size: 1.05rem;
+  margin: 1.25rem 0 0.25rem;
+}
+
+/* --- 作業画面 --- */
+
+.work-section-title {
+  font-size: 1.05rem;
+  margin: 1.5rem 0 0.5rem;
+}
+
+.work-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.work-row {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.work-row.is-done { opacity: 0.6; }
+.work-row.is-done .todo-title { text-decoration: line-through; color: var(--color-muted); }
+.work-row.is-blocked { background: #fffbeb; }
+
+.work-main {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.work-parent::before { content: "in "; }
+
+.work-parent-link { color: var(--color-muted); }
+
+/* アンカー付きで飛んできたノードを目立たせる */
+.mm-node:target > .mm-card {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.work-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.priority-group,
+.move-group {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.priority-btn,
+.move-btn {
+  border: 1px solid var(--color-border);
+  background: #fff;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+  color: var(--color-muted);
+}
+
+.priority-btn.is-current { pointer-events: none; }
+.priority-btn-high.is-current { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+.priority-btn-medium.is-current { background: #e2e8f0; color: #475569; border-color: #94a3b8; }
+.priority-btn-low.is-current { background: #f1f5f9; color: #94a3b8; }
+
+.advance-btn { font-size: 0.8rem; padding: 0.25rem 0.7rem; }
+
+/* --- カレンダー --- */
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.calendar-month { font-weight: bold; padding: 0 0.5rem; }
+
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  table-layout: fixed;
+}
+
+.calendar-table th {
+  border: 1px solid var(--color-border);
+  background: #f1f5f9;
+  font-size: 0.8rem;
+  padding: 0.3rem;
+}
+
+.calendar-table th:first-child { color: #dc2626; }
+.calendar-table th:last-child { color: #2563eb; }
+
+.calendar-cell {
+  border: 1px solid var(--color-border);
+  vertical-align: top;
+  height: 5.5rem;
+  padding: 0.2rem;
+}
+
+.calendar-cell.is-other-month { background: #f8fafc; }
+.calendar-cell.is-other-month .calendar-date { color: #cbd5e1; }
+.calendar-cell.is-today { background: #eff6ff; }
+.calendar-cell.is-today .calendar-date { font-weight: bold; color: #2563eb; }
+
+.calendar-date { font-size: 0.8rem; color: var(--color-muted); }
+
+.calendar-chip {
+  display: block;
+  font-size: 0.7rem;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  margin-top: 0.15rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-chip.is-done { opacity: 0.5; text-decoration: line-through; }
+
+.type-bg-project { background: var(--color-project); }
+.type-bg-epic { background: var(--color-epic); }
+.type-bg-feature { background: var(--color-feature); }
+.type-bg-user_story { background: var(--color-user_story); }
+.type-bg-task { background: var(--color-task); }
+
+.overdue-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.overdue-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
+}

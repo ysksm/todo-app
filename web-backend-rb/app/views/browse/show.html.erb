@@ -1,0 +1,77 @@
+<nav class="breadcrumb">
+  <%= link_to "プロジェクト一覧", browse_path %>
+  <% @ancestors.each do |ancestor| %>
+    <span class="breadcrumb-sep">›</span>
+    <%= link_to ancestor.title, browse_todo_path(ancestor) %>
+  <% end %>
+  <span class="breadcrumb-sep">›</span>
+  <span class="breadcrumb-current"><%= @todo.title %></span>
+</nav>
+
+<div class="page-header">
+  <h1>
+    <span class="type-badge type-<%= @todo.todo_type %>"><%= todo_type_label(@todo.todo_type) %></span>
+    <%= @todo.title %>
+  </h1>
+  <div>
+    <%= link_to "詳細・リンク", todo_path(@todo), class: "btn" %>
+    <%= link_to "マインドマップ", mindmap_path(anchor: "todo-#{@todo.id}"), class: "btn" %>
+    <%= link_to "編集", edit_todo_path(@todo, return_to: browse_todo_path(@todo)), class: "btn" %>
+  </div>
+</div>
+
+<div class="browse-detail">
+  <% if @todo.goal.present? %>
+    <p class="browse-goal">🎯 <%= @todo.goal %></p>
+  <% end %>
+  <div class="browse-meta">
+    <span class="status status-<%= @todo.status %>"><%= todo_status_label(@todo.status) %></span>
+    <span class="priority-badge priority-<%= @todo.priority %>">優先度: <%= todo_priority_label(@todo.priority) %></span>
+    <% if @todo.target_date %>
+      <span class="due-date <%= 'is-overdue' if @todo.target_date < Date.current && !@todo.done? %>">目標: <%= format_target_date(@todo.target_date) %></span>
+    <% end %>
+  </div>
+
+  <table class="metrics-table">
+    <thead>
+      <tr><th></th><th>予定</th><th>実績</th><th>予定（配下合計）</th><th>実績（配下合計）</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th>作業時間</th>
+        <td><%= format_hours(@todo.estimated_hours) %></td>
+        <td><%= format_hours(@todo.actual_hours) %></td>
+        <td><%= format_hours(@todo.rollup(:estimated_hours)) %></td>
+        <td><%= format_hours(@todo.rollup(:actual_hours)) %></td>
+      </tr>
+      <tr>
+        <th>コスト</th>
+        <td><%= format_cost(@todo.estimated_cost) %></td>
+        <td><%= format_cost(@todo.actual_cost) %></td>
+        <td><%= format_cost(@todo.rollup(:estimated_cost)) %></td>
+        <td><%= format_cost(@todo.rollup(:actual_cost)) %></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<%
+  groups = @todo.children.group_by(&:todo_type)
+%>
+<% if @todo.children.empty? %>
+  <p class="empty">この下にはまだ何もありません。</p>
+<% else %>
+  <% Todo::TYPES.each do |type| %>
+    <% next unless groups.key?(type) %>
+    <h2 class="browse-section-title"><%= todo_type_label(type) %>（<%= groups[type].size %>）</h2>
+    <div class="card-grid">
+      <%= render partial: "browse/card", collection: groups[type], as: :todo %>
+    </div>
+  <% end %>
+<% end %>
+
+<% unless @todo.allowed_child_types.empty? %>
+  <div class="form-actions">
+    <%= link_to "＋ 子を追加", new_todo_path(parent_id: @todo.id, return_to: browse_todo_path(@todo)), class: "btn btn-primary" %>
+  </div>
+<% end %>

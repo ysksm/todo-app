@@ -1,0 +1,23 @@
+<%# マインドマップ上で画面遷移せずに子を追加するポップオーバー。
+    parent: 親ノード（nil ならルートに追加）
+    todo:   フォームにバインドする Todo（バリデーションエラー表示にも使う）
+    open:   ポップオーバーを開いた状態で描画するか %>
+<details class="mm-add-details" id="mm-add-<%= parent ? parent.id : "root" %>" <%= "open" if open %>>
+  <% if parent %>
+    <summary class="mm-action mm-add" title="子を追加">＋</summary>
+  <% else %>
+    <summary class="btn btn-primary mm-add-root">＋ ルートに追加</summary>
+  <% end %>
+  <div class="mm-popover">
+    <%= form_with model: todo, url: todos_path, class: "mm-add-form" do |f| %>
+      <%= hidden_field_tag :inline, "mindmap" %>
+      <%= f.hidden_field :parent_id, value: parent&.id %>
+      <% if todo.errors.any? %>
+        <p class="mm-form-error"><%= todo.errors.full_messages.join(" / ") %></p>
+      <% end %>
+      <%= f.select :todo_type, todo_type_options(parent ? parent.allowed_child_types : Todo::TYPES) %>
+      <%= f.text_field :title, placeholder: "タイトル", autofocus: open %>
+      <%= f.submit "追加", class: "btn btn-primary" %>
+    <% end %>
+  </div>
+</details>

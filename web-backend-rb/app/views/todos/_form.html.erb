@@ -10,6 +10,7 @@
   <% end %>
 
   <%= f.hidden_field :parent_id %>
+  <%= hidden_field_tag :return_to, safe_internal_path(params[:return_to]) %>
 
   <% if todo.parent %>
     <p class="parent-info">
@@ -39,12 +40,53 @@
   </div>
 
   <div class="field">
-    <%= f.label :status, "状態" %>
-    <%= f.select :status, todo_status_options %>
+    <%= f.label :goal, "目標記述" %>
+    <%= f.text_area :goal, rows: 3, placeholder: "この項目で達成したいゴール" %>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <%= f.label :status, "状態" %>
+      <%= f.select :status, todo_status_options %>
+    </div>
+
+    <div class="field">
+      <%= f.label :priority, "優先度" %>
+      <%= f.select :priority, todo_priority_options %>
+    </div>
+
+    <div class="field">
+      <%= f.label :target_date, "目標予定日" %>
+      <%= f.date_field :target_date %>
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <%= f.label :estimated_hours, "予定作業時間 (h)" %>
+      <%= f.number_field :estimated_hours, min: 0, step: 0.25 %>
+    </div>
+
+    <div class="field">
+      <%= f.label :actual_hours, "実作業時間 (h)" %>
+      <%= f.number_field :actual_hours, min: 0, step: 0.25 %>
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <%= f.label :estimated_cost, "予定コスト (円)" %>
+      <%= f.number_field :estimated_cost, min: 0, step: 1 %>
+    </div>
+
+    <div class="field">
+      <%= f.label :actual_cost, "実コスト (円)" %>
+      <%= f.number_field :actual_cost, min: 0, step: 1 %>
+    </div>
   </div>
 
   <div class="form-actions">
     <%= f.submit todo.new_record? ? "作成" : "更新", class: "btn btn-primary" %>
-    <%= link_to "キャンセル", todos_path, class: "btn" %>
+    <%= link_to "キャンセル", safe_internal_path(params[:return_to]) || todos_path, class: "btn" %>
   </div>
 <% end %>

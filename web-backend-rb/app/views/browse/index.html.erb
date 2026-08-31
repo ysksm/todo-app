@@ -1,0 +1,14 @@
+<div class="page-header">
+  <h1>プロジェクトを選択</h1>
+  <%= link_to "＋ 新規プロジェクト", new_todo_path(return_to: browse_path), class: "btn btn-primary" %>
+</div>
+
+<p class="hint">プロジェクト → エピック → フィーチャー → ユーザーストーリー → タスクの順に掘り下げて内容を落とし込んでいく画面です。</p>
+
+<% if @projects.empty? %>
+  <p class="empty">まだプロジェクトがありません。</p>
+<% else %>
+  <div class="card-grid">
+    <%= render partial: "browse/card", collection: @projects, as: :todo %>
+  </div>
+<% end %>

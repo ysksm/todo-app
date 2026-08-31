@@ -1,0 +1,32 @@
+<div class="page-header">
+  <h1>作業</h1>
+</div>
+
+<p class="hint">タスクの優先順位付けと消化を行う画面です。「高・中・低」で優先度を変更、「↑↓」で同じ親の中の順番を入れ替え、「▶」で状態を進めます（未着手 → 進行中 → 完了）。</p>
+
+<h2 class="work-section-title">進行中（<%= @in_progress.size %>）</h2>
+<% if @in_progress.empty? %>
+  <p class="empty">進行中のタスクはありません。</p>
+<% else %>
+  <ul class="work-list">
+    <%= render partial: "work/task", collection: @in_progress, as: :todo %>
+  </ul>
+<% end %>
+
+<h2 class="work-section-title">未着手（<%= @open.size %>）</h2>
+<% if @open.empty? %>
+  <p class="empty">未着手のタスクはありません。</p>
+<% else %>
+  <ul class="work-list">
+    <%= render partial: "work/task", collection: @open, as: :todo %>
+  </ul>
+<% end %>
+
+<h2 class="work-section-title">完了（<%= @done.size %>）</h2>
+<% if @done.empty? %>
+  <p class="empty">完了したタスクはまだありません。</p>
+<% else %>
+  <ul class="work-list work-list-done">
+    <%= render partial: "work/task", collection: @done, as: :todo %>
+  </ul>
+<% end %>

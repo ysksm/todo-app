@@ -6,11 +6,44 @@
 </div>
 
 <dl class="todo-detail">
-  <dt>状態</dt>
-  <dd><span class="status status-<%= @todo.status %>"><%= todo_status_label(@todo.status) %></span></dd>
+  <dt>状態 / 優先度</dt>
+  <dd>
+    <span class="status status-<%= @todo.status %>"><%= todo_status_label(@todo.status) %></span>
+    <span class="priority-badge priority-<%= @todo.priority %>">優先度: <%= todo_priority_label(@todo.priority) %></span>
+    <% if @todo.blocked? %>
+      <span class="blocked-badge">ブロック中</span>
+    <% end %>
+  </dd>
 
   <dt>説明</dt>
   <dd><%= @todo.description.presence || "（なし）" %></dd>
+
+  <dt>目標記述</dt>
+  <dd><%= @todo.goal.presence || "（なし）" %></dd>
+
+  <dt>目標予定日</dt>
+  <dd><%= format_target_date(@todo.target_date) %></dd>
+
+  <dt>作業時間 / コスト</dt>
+  <dd>
+    <table class="metrics-table">
+      <thead>
+        <tr><th></th><th>予定</th><th>実績</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>作業時間</th>
+          <td><%= format_hours(@todo.estimated_hours) %></td>
+          <td><%= format_hours(@todo.actual_hours) %></td>
+        </tr>
+        <tr>
+          <th>コスト</th>
+          <td><%= format_cost(@todo.estimated_cost) %></td>
+          <td><%= format_cost(@todo.actual_cost) %></td>
+        </tr>
+      </tbody>
+    </table>
+  </dd>
 
   <dt>親</dt>
   <dd>
@@ -31,12 +64,65 @@
       （なし）
     <% end %>
   </dd>
+
+  <dt>関連・依存</dt>
+  <dd>
+    <%
+      depends = @todo.outgoing_links.select { |l| l.link_type == "depends_on" }
+      depended = @todo.incoming_links.select { |l| l.link_type == "depends_on" }
+      related_out = @todo.outgoing_links.select { |l| l.link_type == "relates_to" }
+      related_in = @todo.incoming_links.select { |l| l.link_type == "relates_to" }
+    %>
+    <% if depends.empty? && depended.empty? && related_out.empty? && related_in.empty? %>
+      <p class="empty">リンクはまだありません。</p>
+    <% else %>
+      <ul class="link-list">
+        <% depends.each do |link| %>
+          <li>
+            <span class="link-kind link-depends">依存先</span>
+            <%= link_to link.target.title, todo_path(link.target) %>
+            <span class="status status-<%= link.target.status %>"><%= todo_status_label(link.target.status) %></span>
+            <%= button_to "解除", todo_link_path(@todo, link), method: :delete, class: "link-danger" %>
+          </li>
+        <% end %>
+        <% depended.each do |link| %>
+          <li>
+            <span class="link-kind link-depended">依存されている</span>
+            <%= link_to link.source.title, todo_path(link.source) %>
+            <%= button_to "解除", todo_link_path(@todo, link), method: :delete, class: "link-danger" %>
+          </li>
+        <% end %>
+        <% (related_out + related_in).each do |link| %>
+          <% other = link.source_id == @todo.id ? link.target : link.source %>
+          <li>
+            <span class="link-kind link-related">関連</span>
+            <%= link_to other.title, todo_path(other) %>
+            <%= button_to "解除", todo_link_path(@todo, link), method: :delete, class: "link-danger" %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+
+    <%= form_with model: [ @todo, TodoLink.new ], url: todo_links_path(@todo), class: "link-form" do |f| %>
+      <%= f.select :link_type, link_type_options %>
+      <%
+        candidates = Todo.where.not(id: @todo.id).ordered.map do |t|
+          [ "#{todo_type_label(t.todo_type)}: #{t.title}", t.id ]
+        end
+      %>
+      <%= f.select :target_id, candidates, { prompt: "リンク先を選択" } %>
+      <%= f.submit "リンクを追加", class: "btn" %>
+      <p class="hint">「依存」はこの TODO が選択先に依存している（選択先が終わるまで着手できない）ことを表します。</p>
+    <% end %>
+  </dd>
 </dl>
 
 <div class="form-actions">
   <% unless @todo.allowed_child_types.empty? %>
-    <%= link_to "＋ 子を追加", new_todo_path(parent_id: @todo.id), class: "btn btn-primary" %>
+    <%= link_to "＋ 子を追加", new_todo_path(parent_id: @todo.id, return_to: todo_path(@todo)), class: "btn btn-primary" %>
   <% end %>
-  <%= link_to "編集", edit_todo_path(@todo), class: "btn" %>
+  <%= link_to "編集", edit_todo_path(@todo, return_to: todo_path(@todo)), class: "btn" %>
+  <%= link_to "ブラウズで掘り下げ", browse_todo_path(@todo), class: "btn" %>
+  <%= link_to "マインドマップで見る", mindmap_path(anchor: "todo-#{@todo.id}"), class: "btn" %>
   <%= link_to "一覧へ戻る", todos_path, class: "btn" %>
 </div>
