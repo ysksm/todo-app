@@ -1,0 +1,42 @@
+<div class="page-header">
+  <h1>
+    <span class="type-badge type-<%= @todo.todo_type %>"><%= todo_type_label(@todo.todo_type) %></span>
+    <%= @todo.title %>
+  </h1>
+</div>
+
+<dl class="todo-detail">
+  <dt>状態</dt>
+  <dd><span class="status status-<%= @todo.status %>"><%= todo_status_label(@todo.status) %></span></dd>
+
+  <dt>説明</dt>
+  <dd><%= @todo.description.presence || "（なし）" %></dd>
+
+  <dt>親</dt>
+  <dd>
+    <% if @todo.parent %>
+      <%= link_to @todo.parent.title, todo_path(@todo.parent) %>
+    <% else %>
+      ルート
+    <% end %>
+  </dd>
+
+  <dt>子（<%= @todo.children.size %>）</dt>
+  <dd>
+    <% if @todo.children.any? %>
+      <ul class="todo-tree">
+        <%= render partial: "node", collection: @todo.children, as: :todo %>
+      </ul>
+    <% else %>
+      （なし）
+    <% end %>
+  </dd>
+</dl>
+
+<div class="form-actions">
+  <% unless @todo.allowed_child_types.empty? %>
+    <%= link_to "＋ 子を追加", new_todo_path(parent_id: @todo.id), class: "btn btn-primary" %>
+  <% end %>
+  <%= link_to "編集", edit_todo_path(@todo), class: "btn" %>
+  <%= link_to "一覧へ戻る", todos_path, class: "btn" %>
+</div>

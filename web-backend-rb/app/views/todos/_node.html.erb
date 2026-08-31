@@ -1,0 +1,24 @@
+<li class="todo-node">
+  <div class="todo-row <%= "is-done" if todo.done? %>">
+    <% toggle_label = todo.done? ? "「#{todo.title}」を未着手に戻す" : "「#{todo.title}」を完了にする" %>
+    <%= button_to "✓", toggle_todo_path(todo), method: :patch,
+          class: "toggle #{'toggled' if todo.done?}",
+          title: toggle_label, "aria-label": toggle_label, "aria-pressed": todo.done? %>
+    <span class="type-badge type-<%= todo.todo_type %>"><%= todo_type_label(todo.todo_type) %></span>
+    <%= link_to todo.title, todo_path(todo), class: "todo-title" %>
+    <span class="status status-<%= todo.status %>"><%= todo_status_label(todo.status) %></span>
+    <span class="actions">
+      <% unless todo.allowed_child_types.empty? %>
+        <%= link_to "＋子", new_todo_path(parent_id: todo.id), title: "子を追加" %>
+      <% end %>
+      <%= link_to "編集", edit_todo_path(todo) %>
+      <%= button_to "削除", todo_path(todo), method: :delete, class: "link-danger",
+            form: { data: { turbo_confirm: "「#{todo.title}」と子孫をすべて削除します。よろしいですか？" } } %>
+    </span>
+  </div>
+  <% if todo.children.any? %>
+    <ul class="todo-tree">
+      <%= render partial: "node", collection: todo.children, as: :todo %>
+    </ul>
+  <% end %>
+</li>

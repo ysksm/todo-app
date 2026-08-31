@@ -1,0 +1,12 @@
+<div class="page-header">
+  <h1>TODO ツリー</h1>
+  <%= link_to "＋ ルートに追加", new_todo_path, class: "btn btn-primary" %>
+</div>
+
+<% if @roots.empty? %>
+  <p class="empty">まだ TODO がありません。「＋ ルートに追加」から作成してください。</p>
+<% else %>
+  <ul class="todo-tree">
+    <%= render partial: "node", collection: @roots, as: :todo %>
+  </ul>
+<% end %>
