@@ -15,9 +15,6 @@
     <%= @todo.title %>
   </h1>
   <div class="page-header-actions">
-    <%= render "browse/view_toggle", path_options: { controller: "browse", action: "show", id: @todo.id } %>
-    <%= link_to "詳細・リンク", todo_path(@todo), class: "btn" %>
-    <%= link_to "マインドマップ", mindmap_path(@todo), class: "btn" %>
     <%= link_to "編集", edit_todo_path(@todo, return_to: browse_todo_path(@todo)), class: "btn" %>
   </div>
 </div>
@@ -57,15 +54,38 @@
   </table>
 </div>
 
+<details class="inline-panel">
+  <summary class="btn">詳細・リンク（関連・依存）</summary>
+  <div class="inline-panel-body">
+    <% if @todo.description.present? %>
+      <p><%= @todo.description %></p>
+    <% end %>
+    <%= render "todos/links_panel", todo: @todo %>
+    <p class="hint"><%= link_to "詳細ページを開く", todo_path(@todo) %></p>
+  </div>
+</details>
+
+<details class="inline-panel">
+  <summary class="btn">マインドマップ（このチケットの配下のみ）</summary>
+  <div class="inline-panel-body">
+    <%= render "mindmap/map", roots: [ @todo ] %>
+    <p class="hint"><%= link_to "マインドマップ画面で大きく開く", mindmap_path(@todo) %></p>
+  </div>
+</details>
+
 <%
   groups = @todo.children.group_by(&:todo_type)
 %>
 <% if @todo.children.empty? %>
   <p class="empty">この下にはまだ何もありません。</p>
 <% else %>
+  <div class="children-header">
+    <h2 class="browse-section-title">子要素（<%= @todo.children.size %>）</h2>
+    <%= render "browse/view_toggle", path_options: { controller: "browse", action: "show", id: @todo.id } %>
+  </div>
   <% Todo::TYPES.each do |type| %>
     <% next unless groups.key?(type) %>
-    <h2 class="browse-section-title"><%= todo_type_label(type) %>（<%= groups[type].size %>）</h2>
+    <h3 class="browse-group-title"><%= todo_type_label(type) %>（<%= groups[type].size %>）</h3>
     <%= render "browse/items", items: groups[type] %>
   <% end %>
 <% end %>

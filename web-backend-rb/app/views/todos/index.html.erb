@@ -6,7 +6,24 @@
 <% if @roots.empty? %>
   <p class="empty">まだ TODO がありません。「＋ ルートに追加」から作成してください。</p>
 <% else %>
-  <ul class="todo-tree">
-    <%= render partial: "node", collection: @roots, as: :todo %>
-  </ul>
+  <div class="table-scroll">
+    <table class="tree-table">
+      <thead>
+        <tr>
+          <th class="tree-table-toggle"></th>
+          <th>種類</th>
+          <th>タイトル</th>
+          <th>優先度</th>
+          <th>目標予定日</th>
+          <th>状態</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @roots.each do |root| %>
+          <%= render "todos/tree_row", todo: root, depth: 0 %>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
 <% end %>

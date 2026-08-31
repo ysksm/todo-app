@@ -1,8 +1,23 @@
-<%# items を現在の表示モード（@view: card / list）で描画する %>
+<%# items を現在の表示モード（@view: card / list）で描画する。list は表形式。 %>
 <% if @view == "list" %>
-  <ul class="browse-list">
-    <%= render partial: "browse/list_item", collection: items, as: :todo %>
-  </ul>
+  <div class="table-scroll">
+    <table class="browse-table">
+      <thead>
+        <tr>
+          <th>種類</th>
+          <th>タイトル</th>
+          <th>目標</th>
+          <th>優先度</th>
+          <th>目標予定日</th>
+          <th>進捗</th>
+          <th>状態</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= render partial: "browse/list_row", collection: items, as: :todo %>
+      </tbody>
+    </table>
+  </div>
 <% else %>
   <div class="card-grid">
     <%= render partial: "browse/card", collection: items, as: :todo %>

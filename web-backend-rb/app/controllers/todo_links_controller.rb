@@ -5,9 +5,9 @@ class TodoLinksController < ApplicationController
   def create
     link = @todo.outgoing_links.build(link_params)
     if link.save
-      redirect_to todo_path(@todo), notice: "リンクを追加しました。"
+      redirect_back fallback_location: todo_path(@todo), notice: "リンクを追加しました。"
     else
-      redirect_to todo_path(@todo), alert: link.errors.full_messages.join(" / ")
+      redirect_back fallback_location: todo_path(@todo), alert: link.errors.full_messages.join(" / ")
     end
   end
 
@@ -15,7 +15,7 @@ class TodoLinksController < ApplicationController
     link = TodoLink.where(source_id: @todo.id).or(TodoLink.where(target_id: @todo.id))
                    .find(params[:id])
     link.destroy!
-    redirect_to todo_path(@todo), notice: "リンクを削除しました。", status: :see_other
+    redirect_back fallback_location: todo_path(@todo), notice: "リンクを削除しました。", status: :see_other
   end
 
   private

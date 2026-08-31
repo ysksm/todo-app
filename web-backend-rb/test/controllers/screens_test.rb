@@ -36,18 +36,33 @@ class ScreensTest < ActionDispatch::IntegrationTest
     assert_select ".browse-card", minimum: 1
   end
 
-  test "ブラウズは view=list でリスト表示になる" do
+  test "ブラウズは view=list で表形式のリスト表示になる" do
     get browse_path(view: "list")
     assert_response :success
-    assert_select ".browse-list-row", minimum: 1
+    assert_select ".browse-table tbody tr", minimum: 1
     assert_select ".browse-card", count: 0
   end
 
-  test "ブラウズの掘り下げ画面も view=list でリスト表示になる" do
+  test "ブラウズの掘り下げ画面も view=list で表形式になる" do
     get browse_todo_path(todos(:project_alpha), view: "list")
     assert_response :success
-    assert_select ".browse-list-row", minimum: 1
+    assert_select ".browse-table tbody tr", minimum: 1
     assert_select ".browse-card", count: 0
+  end
+
+  test "ブラウズの掘り下げ画面に詳細とマインドマップの開閉パネルがある" do
+    get browse_todo_path(todos(:project_alpha))
+    assert_response :success
+    assert_select ".inline-panel", minimum: 2
+    assert_select ".inline-panel .mindmap"
+    assert_select ".inline-panel .link-form"
+  end
+
+  test "ツリー画面は表形式で全 TODO を表示する" do
+    get root_path
+    assert_response :success
+    assert_select ".tree-table tbody tr", count: Todo.count
+    assert_select ".tree-table .tree-marker", count: Todo.count - Todo.roots.count
   end
 
   test "ブラウズは存在しない id で 404" do

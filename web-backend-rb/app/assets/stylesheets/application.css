@@ -656,34 +656,90 @@ h1 { font-size: 1.4rem; }
   color: #fff;
 }
 
-.browse-list {
-  list-style: none;
-  padding-left: 0;
-  margin: 0.5rem 0 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.browse-list-row {
+.children-header {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  background: #fff;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 0.4rem 0.75rem;
+  justify-content: space-between;
+  gap: 1rem;
   flex-wrap: wrap;
+  margin-top: 1.25rem;
 }
 
-.browse-list-row.is-done .todo-title {
+.children-header .browse-section-title { margin: 0; }
+
+.browse-group-title {
+  font-size: 0.95rem;
+  color: var(--color-muted);
+  margin: 0.85rem 0 0.25rem;
+}
+
+/* --- 一覧テーブル（ブラウズのリスト表示・ツリー表） --- */
+
+.table-scroll { overflow-x: auto; }
+
+.browse-table,
+.tree-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 0.9rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.browse-table th,
+.browse-table td,
+.tree-table th,
+.tree-table td {
+  border: 1px solid var(--color-border);
+  padding: 0.4rem 0.65rem;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.browse-table th,
+.tree-table th {
+  background: #f1f5f9;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.browse-table tr.is-done .todo-title,
+.tree-table tr.is-done .todo-title {
   text-decoration: line-through;
   color: var(--color-muted);
 }
 
-.browse-list-row .todo-title { flex: 0 1 auto; }
+.tree-table-toggle { width: 2.5rem; text-align: center; }
 
-.browse-list-goal { flex: 1; min-width: 8rem; }
+.tree-indent { display: inline-flex; align-items: center; gap: 0.35rem; }
+
+.tree-marker { color: #cbd5e1; font-size: 0.8rem; }
+
+/* --- 画面遷移しない開閉パネル（詳細・リンク / マインドマップ） --- */
+
+.inline-panel { margin: 0.75rem 0; }
+
+.inline-panel > summary {
+  list-style: none;
+  display: inline-block;
+  cursor: pointer;
+  user-select: none;
+}
+
+.inline-panel > summary::-webkit-details-marker { display: none; }
+
+.inline-panel > summary::before { content: "▸ "; color: var(--color-muted); }
+
+.inline-panel[open] > summary::before { content: "▾ "; }
+
+.inline-panel-body {
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-top: 0.5rem;
+}
 
 /* --- 作業画面 --- */
 

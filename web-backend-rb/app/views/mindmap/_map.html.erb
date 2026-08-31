@@ -1,0 +1,6 @@
+<%# マインドマップ本体。roots に表示するルートノードの配列を受け取る。 %>
+<div class="mindmap-scroll">
+  <div class="mindmap">
+    <ul class="mm-children mm-root" id="mm-root-children"><%= render partial: "mindmap/node", collection: roots, as: :todo %></ul>
+  </div>
+</div>

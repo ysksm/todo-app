@@ -29,8 +29,4 @@
 <% if @roots.empty? %>
   <p class="empty">まだ TODO がありません。「＋ ルートに追加」から作成してください。</p>
 <% end %>
-<div class="mindmap-scroll">
-  <div class="mindmap">
-    <ul class="mm-children mm-root" id="mm-root-children"><%= render partial: "mindmap/node", collection: @roots, as: :todo %></ul>
-  </div>
-</div>
+<%= render "mindmap/map", roots: @roots %>
