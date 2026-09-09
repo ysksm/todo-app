@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>サーバー側の変更をフロントへ届ける（リアルタイム同期の設計案）</title>
+    <style>
+      :root {
+        color: #17231d;
+        background: #f4f7f5;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main { width: min(100% - 32px, 920px); margin: 0 auto; padding: 48px 0 72px; }
+      h1, h2, h3 { color: #17231d; letter-spacing: 0; }
+      h1 { margin: 0 0 12px; font-size: 36px; line-height: 1.2; }
+      h2 { margin: 0 0 14px; font-size: 21px; }
+      h3 { margin: 26px 0 10px; font-size: 16px; color: #2f694c; }
+      p { margin: 0 0 14px; }
+      .lead { max-width: 680px; color: #52675a; font-size: 17px; }
+      section { margin-top: 34px; padding-top: 24px; border-top: 1px solid #c5d0c8; }
+      pre { overflow-x: auto; margin: 14px 0; padding: 16px; border-radius: 6px; background: #16231c; color: #e9f2eb; font: 13px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; }
+      code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .note { padding: 14px; border-left: 4px solid #397354; background: #e6efe9; color: #294836; }
+      .note p:last-child { margin-bottom: 0; }
+      .warn { padding: 14px; border-left: 4px solid #b06a2c; background: #fbf2e9; color: #7a4a1c; }
+      .warn p:last-child { margin-bottom: 0; }
+      ul, ol { margin: 0 0 14px; padding-left: 22px; }
+      li + li { margin-top: 7px; }
+
+      nav.toc { margin: 22px 0 0; padding: 14px 18px; border: 1px solid #aebfb4; border-radius: 6px; background: #fff; }
+      nav.toc ul { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; padding: 0; list-style: none; }
+      nav.toc li + li { margin-top: 0; }
+      nav.toc a { color: #2f694c; font-size: 14px; }
+
+      .table-wrap { overflow-x: auto; margin: 14px 0; }
+      table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
+      th, td { padding: 9px 12px; border: 1px solid #c5d0c8; text-align: left; vertical-align: top; }
+      th { background: #e6efe9; color: #294836; font-weight: 600; white-space: nowrap; }
+      td code, th code { font-size: 13px; }
+      tbody th { background: #fff; color: #17231d; }
+      tr.pick td, tr.pick th { background: #eaf3ed; }
+
+      figure { margin: 18px 0; padding: 16px; border: 1px solid #aebfb4; border-radius: 6px; background: #fff; }
+      figure svg { display: block; width: 100%; height: auto; }
+      figcaption { margin-top: 10px; color: #52675a; font-size: 13px; }
+
+      .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 18px 0; }
+      .card { padding: 14px; border: 1px solid #aebfb4; border-radius: 6px; background: #fff; }
+      .card strong { display: block; margin-bottom: 6px; color: #2f694c; font-size: 14px; }
+      .card span { display: block; color: #52675a; font-size: 14px; }
+      .card code { font-size: 12px; }
+      .card--pivot { border-color: #397354; border-left-width: 4px; }
+      .card .src { display: block; margin-top: 8px; color: #7d8f84; font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; word-break: break-all; }
+
+      .option { margin-top: 14px; padding: 16px 18px; border: 1px solid #aebfb4; border-radius: 6px; background: #fff; }
+      .option > h3 { margin-top: 0; }
+      .option--pick { border-color: #397354; border-left-width: 4px; background: #f6faf7; }
+      .option p:last-child { margin-bottom: 0; }
+      .option .verdict { color: #52675a; font-size: 14px; }
+
+      .badge { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: #397354; color: #fff; font-size: 12px; vertical-align: 2px; }
+      .badge--out { background: #8a9a90; }
+
+      .phase { margin-top: 22px; padding: 16px 18px; border: 1px solid #aebfb4; border-radius: 6px; background: #fff; }
+      .phase > h3 { margin-top: 0; }
+      .phase-id { display: inline-block; margin-right: 8px; padding: 1px 7px; border-radius: 3px; background: #e6efe9; color: #2f694c; font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .phase p:last-child, .phase ul:last-child { margin-bottom: 0; }
+
+      @media (max-width: 720px) {
+        main { width: min(100% - 24px, 920px); padding-top: 28px; }
+        h1 { font-size: 28px; }
+        .cards { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>サーバー側の変更をフロントへ届ける</h1>
+        <p class="lead">
+          Web API・MCP・CLI の 3 つの入口から書き換わる TODO を、開いたままの画面へ反映するための
+          方式比較と、このリポジトリの構成に合わせた推奨アーキテクチャ。まだ実装していない検討資料。
+        </p>
+        <nav class="toc">
+          <ul>
+            <li><a href="#constraints">1. 現状の制約</a></li>
+            <li><a href="#options">2. 方式の比較</a></li>
+            <li><a href="#recommended">3. 推奨構成</a></li>
+            <li><a href="#phases">4. 段階導入</a></li>
+            <li><a href="#sketch">5. 実装スケッチ</a></li>
+            <li><a href="#pitfalls">6. 気をつける点</a></li>
+            <li><a href="#decisions">7. 決めること</a></li>
+          </ul>
+        </nav>
+      </header>
+
+      <!-- ============================================================ -->
+      <section id="constraints">
+        <h2>1. 現状の制約</h2>
+        <p>
+          一般論としてのリアルタイム同期ではなく、いまのコードがすでに決めてしまっている条件から入る。
+          とくに 1 つ目は、方式選択そのものを左右する。
+        </p>
+
+        <div class="cards">
+          <div class="card card--pivot">
+            <strong>書き手が 3 つ、うち 1 つは別プロセス</strong>
+            <span>
+              webapi と mcp は同じ <code>TodoService</code> を共有するが、cli は HTTP を介さず JSONL を
+              直接書き換える。<strong>サーバープロセス内のイベントバスだけでは cli の変更を取りこぼす。</strong>
+            </span>
+            <span class="src">interfaces/cli/main.py</span>
+          </div>
+          <div class="card">
+            <strong>書き込み口は 1 か所</strong>
+            <span>
+              更新は毎回ファイル全体を書き直し、<code>_locked()</code> が別プロセス間まで排他する。
+              全員がここを通るので、版番号を差し込む場所がある。
+            </span>
+            <span class="src">core/repositories/todo_repository.py:135-173</span>
+          </div>
+          <div class="card">
+            <strong>フロントは元から全件再取得</strong>
+            <span>
+              ミューテーションのたびに <code>listTodos.execute()</code> を呼び直している。
+              「変更があった」合図さえ届けば、既存の再取得経路に乗せるだけで済む。
+            </span>
+            <span class="src">presentation/hooks/use-todos.ts:53-67</span>
+          </div>
+          <div class="card">
+            <strong>版番号が存在しない</strong>
+            <span>
+              <code>Todo</code> に <code>updated_at</code> も rev も無い。差分配信・ETag・再接続時の
+              取りこぼし判定、いずれも基準が作れない。<strong>まずここを足す。</strong>
+            </span>
+            <span class="src">core/models/todo.py</span>
+          </div>
+          <div class="card">
+            <strong>データが小さい</strong>
+            <span>
+              全件取得が常用されている規模。差分計算に踏み込まなくても、
+              スナップショット送信や再取得で十分成立する。
+            </span>
+          </div>
+          <div class="card">
+            <strong>単一プロセス、Web UI に認証なし</strong>
+            <span>
+              <code>uvicorn --reload</code> の 1 ワーカー運用。API キーがあるのは MCP のみ。
+              将来 <code>--workers</code> を使うとプロセス内 pub/sub は割れる。
+            </span>
+            <span class="src">web-backend/start.sh</span>
+          </div>
+        </div>
+
+        <div class="note">
+          <p>
+            まとめると <strong>「通知の起点をサーバープロセスの中に置けない」</strong>のが、この設計の
+            いちばんの制約。どの方式を選ぶにせよ、cli の書き込みを拾う経路が別に要る。
+          </p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="options">
+        <h2>2. 方式の比較</h2>
+        <p>
+          「サーバーがフロントへ知らせる」経路の候補。上から下へ、常時接続の度合いと実装量が増えていく。
+        </p>
+
+        <div class="option">
+          <h3>A. 定期ポーリング（＋ ETag）</h3>
+          <p>
+            フロントが数秒おきに <code>GET /api/todos</code> を叩く。<code>If-None-Match</code> を付ければ、
+            変更が無いときは 304 が返るだけで転送量はほぼゼロになる。
+          </p>
+          <p class="verdict">
+            最短で動くが、遅延と無駄打ちがトレードオフとして残り続ける。5 秒間隔なら 1 タブあたり
+            1 日 17,000 リクエスト。暫定策として、また常時接続が張れない環境のフォールバックとしては有効。
+          </p>
+        </div>
+
+        <div class="option">
+          <h3>B. ロングポーリング</h3>
+          <p>
+            <code>GET /api/todos/changes?since=rev</code> を、変更が起きるかタイムアウトするまで
+            サーバー側で保留する。返ったらフロントが即座に張り直す。
+          </p>
+          <p class="verdict">
+            得られる体験は SSE とほぼ同じなのに、再接続・タイムアウト・重複検知を自前で書くことになる。
+            SSE が使える以上、あえて選ぶ理由が薄い。
+          </p>
+        </div>
+
+        <div class="option option--pick">
+          <h3>C. Server-Sent Events (SSE)<span class="badge">推奨</span></h3>
+          <p>
+            1 本の HTTP レスポンスを開いたままにして、サーバーからテキストのイベントを流す。
+            ブラウザ側は <code>EventSource</code> だけ。切断時の再接続と <code>Last-Event-ID</code> による
+            再開が仕様に組み込まれている。
+          </p>
+          <p>
+            <strong>サーバー→クライアントの一方向で足りる、いまの要件にちょうど合う。</strong>
+            FastAPI の <code>StreamingResponse</code> で書けて追加ライブラリは不要、Vite の
+            <code>/api</code> プロキシもそのまま通る。
+          </p>
+          <p class="verdict">
+            ただし素の SSE は「サーバープロセス内で起きた変更」しか知らない。cli の変更を拾うには、
+            <a href="#recommended">3 章</a>の版番号ファイル監視と組み合わせる必要がある。
+          </p>
+        </div>
+
+        <div class="option">
+          <h3>D. WebSocket</h3>
+          <p>全二重の常時接続。クライアントからサーバーへも随時送れる。</p>
+          <p class="verdict">
+            いま必要なのは通知の一方向だけで、書き込みは既存の REST が担っている。
+            共同編集のカーソル共有・入力中表示・楽観ロックの奪い合いといった双方向の要求が出てきたら、
+            その時点で乗り換える。先取りするには維持コストが高い。
+          </p>
+        </div>
+
+        <div class="option">
+          <h3>E. 外部ブローカー（Redis Pub/Sub 等）＋ SSE</h3>
+          <p>
+            変更をブローカーへ publish し、各サーバープロセスが購読してぶら下がるクライアントへ流す。
+          </p>
+          <p class="verdict">
+            複数ホストへ広げる段になったら必要になる。いまは JSONL ファイル 1 本を共有する単一ホスト構成で、
+            ファイル自体がすでにブローカーの役割を果たしている。C の配信口を保ったまま、
+            後から内側だけ差し替えられる。
+          </p>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>方式</th>
+                <th>追従の速さ</th>
+                <th>実装量</th>
+                <th>cli の変更</th>
+                <th>複数ワーカー</th>
+                <th>追加依存</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th>A ポーリング</th>
+                <td>間隔しだい（3〜10 秒）</td>
+                <td>小</td>
+                <td>拾える</td>
+                <td>問題なし</td>
+                <td>なし</td>
+              </tr>
+              <tr>
+                <th>B ロングポーリング</th>
+                <td>1 秒未満</td>
+                <td>中</td>
+                <td>版番号の監視が要る</td>
+                <td>版番号の監視で可</td>
+                <td>なし</td>
+              </tr>
+              <tr class="pick">
+                <th>C SSE</th>
+                <td>0.5 秒未満</td>
+                <td>中</td>
+                <td>版番号の監視が要る</td>
+                <td>版番号の監視で可</td>
+                <td>なし</td>
+              </tr>
+              <tr>
+                <th>D WebSocket</th>
+                <td>0.1 秒未満</td>
+                <td>大</td>
+                <td>版番号の監視が要る</td>
+                <td>版番号の監視で可</td>
+                <td>なし</td>
+              </tr>
+              <tr>
+                <th>E ブローカー ＋ SSE</th>
+                <td>0.1 秒未満</td>
+                <td>大</td>
+                <td>cli も publish 側へ</td>
+                <td>本命</td>
+                <td>Redis 等</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          「cli の変更」は、HTTP を通さずファイルを直接書き換えたときに、開いている画面へ届くかどうか。
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="recommended">
+        <h2>3. 推奨構成</h2>
+        <p>
+          方式は C（SSE）。要は<strong>「誰が書いたか」をサーバーが気にしなくて済む形</strong>にする。
+          3 つのインターフェースはすべて <code>TodoRepository</code> の <code>_locked()</code> を通ってから
+          書き込むので、その中で版番号ファイルを 1 つ進める。サーバーはそのファイルだけを見張る。
+        </p>
+
+        <figure>
+          <svg viewBox="0 0 720 240" role="img" aria-label="3 つのインターフェースの書き込みが版番号ファイルに集約され、監視タスクとブローカーを経て SSE でブラウザへ届く構成図">
+            <g fill="none" stroke="#397354" stroke-width="1.5">
+              <path d="M166,37 C190,37 190,103 206,103" />
+              <path d="M166,103 L206,103" />
+              <path d="M166,169 C190,169 190,103 206,103" />
+              <path d="M406,103 L436,103" />
+              <path d="M554,103 L584,103" />
+              <path d="M648,127 L648,176" />
+            </g>
+            <g font-family="system-ui, sans-serif" font-size="13">
+              <g>
+                <rect x="16" y="20" width="150" height="34" rx="6" fill="#ffffff" stroke="#aebfb4" />
+                <text x="30" y="42" fill="#17231d">interfaces/webapi</text>
+              </g>
+              <g>
+                <rect x="16" y="86" width="150" height="34" rx="6" fill="#ffffff" stroke="#aebfb4" />
+                <text x="30" y="108" fill="#17231d">interfaces/mcp</text>
+              </g>
+              <g>
+                <rect x="16" y="152" width="150" height="34" rx="6" fill="#ffffff" stroke="#aebfb4" />
+                <text x="30" y="174" fill="#17231d">interfaces/cli</text>
+                <text x="16" y="202" fill="#52675a" font-size="11">別プロセス。HTTP を通さない</text>
+              </g>
+              <g>
+                <rect x="206" y="75" width="200" height="56" rx="6" fill="#2f694c" />
+                <text x="222" y="99" fill="#ffffff">todos.jsonl ＋ todos.rev</text>
+                <text x="222" y="118" fill="#cfe4d8" font-size="11">flock の中で +1</text>
+              </g>
+              <g>
+                <rect x="436" y="79" width="118" height="48" rx="6" fill="#ffffff" stroke="#aebfb4" />
+                <text x="450" y="100" fill="#17231d">rev を監視</text>
+                <text x="450" y="118" fill="#52675a" font-size="11">0.3 秒ごと</text>
+              </g>
+              <g>
+                <rect x="584" y="79" width="120" height="48" rx="6" fill="#ffffff" stroke="#aebfb4" />
+                <text x="596" y="107" fill="#17231d">ChangeBroker</text>
+              </g>
+              <g>
+                <rect x="206" y="176" width="498" height="44" rx="6" fill="#e6efe9" stroke="#aebfb4" />
+                <text x="222" y="203" fill="#294836">SSE — GET /api/todos/events → EventSource → 再取得</text>
+              </g>
+            </g>
+          </svg>
+          <figcaption>
+            変更の出所をファイル 1 か所に集約するので、書き手が増えても配信側は変わらない。
+          </figcaption>
+        </figure>
+
+        <h3>この形を選ぶ理由</h3>
+        <ul>
+          <li>
+            <strong>cli も自動で拾える。</strong>通知の起点をプロセス内のフックではなくファイルに置いたので、
+            書き手が誰であっても同じ経路に乗る。
+          </li>
+          <li>
+            <strong>複数ワーカーでも壊れない。</strong>各ワーカーが同じファイルを見張るだけなので、
+            <code>--workers 4</code> にしても Redis を足さずに動く。
+          </li>
+          <li>
+            <strong>版番号が他にも効く。</strong>ETag・楽観ロック・再接続時の取りこぼし判定が、
+            同じ 1 つの数から導ける。
+          </li>
+          <li>
+            <strong>捨てやすい。</strong>監視タスクとエンドポイントを外せば元の挙動に戻る。
+            core への変更は rev の加算だけ。
+          </li>
+        </ul>
+
+        <h3>遅延について</h3>
+        <p>
+          0.3 秒間隔の <code>stat()</code> は、体感上は即時で、負荷としては無視できる。
+          それでも足りなければ、<strong>同一プロセス内の書き込みだけブローカーへ即時 publish する早出し</strong>を
+          併用できる。rev で重複排除するので、監視タスクと二重に流れても画面には 1 回しか届かない。
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="phases">
+        <h2>4. 段階導入</h2>
+        <p>各段階だけで完結して価値が出る。途中で止めても壊れない順に並べた。</p>
+
+        <div class="phase">
+          <h3><span class="phase-id">PHASE 0</span>版番号を core に入れる</h3>
+          <p>
+            <code>data/todos.rev</code> を <code>_locked()</code> の中で更新し、
+            <code>GET /api/todos</code> のレスポンスに <code>ETag</code> と <code>X-Todo-Rev</code> を付ける。
+          </p>
+          <ul>
+            <li>この時点で案 A（条件付き GET のポーリング）が数行で実現でき、SSE を待たずに複数タブ同期が成立する</li>
+            <li>SSE も含め、以降すべての土台になる</li>
+          </ul>
+        </div>
+
+        <div class="phase">
+          <h3><span class="phase-id">PHASE 1</span>SSE で「変わった」だけ流す</h3>
+          <p>
+            監視タスク・ブローカー・<code>GET /api/todos/events</code> を足す。
+            フロントは変更を受けたら既存の <code>reload()</code> を呼ぶだけ。
+          </p>
+          <ul>
+            <li>差分計算もマージも書かないので、状態がずれる余地がない</li>
+            <li>フロントの変更は購読フック 1 つと、それを呼ぶ 1 行</li>
+          </ul>
+        </div>
+
+        <div class="phase">
+          <h3><span class="phase-id">PHASE 2</span>イベントに中身を持たせる</h3>
+          <p>
+            <code>{ rev, kind, ids }</code> を載せ、<code>Last-Event-ID</code> での再開に対応する。
+            編集中のノードを再取得で潰さないよう、部分更新へ寄せる。
+          </p>
+          <ul>
+            <li>マインドマップで編集中に他所の変更が来ても、フォーカスと入力途中が飛ばない</li>
+            <li>取りこぼしを検知したら全件再取得へフォールバック</li>
+          </ul>
+        </div>
+
+        <div class="phase">
+          <h3><span class="phase-id">PHASE 3</span>必要になったら内側を差し替える</h3>
+          <p>
+            複数ホストへ広げるなら案 E、双方向が要るなら案 D。フロントの購読ポートを変えずに済むよう、
+            Phase 1 の時点で境界を切っておく。
+          </p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="sketch">
+        <h2>5. 実装スケッチ</h2>
+        <p>
+          既存の依存の向き（<code>interfaces/</code> → <code>core/</code>、フロントは domain /
+          application / infrastructure / presentation）を崩さない配置。
+        </p>
+
+        <h3>core/change_log.py（新規）</h3>
+        <p>版番号の読み書き。core に置くので cli からも同じものが使われる。</p>
+<pre><code>from __future__ import annotations
+
+import json
+from dataclasses import asdict, dataclass
+from pathlib import Path
+
+
+@dataclass(frozen=True)
+class Change:
+    rev: int
+    kind: str          # created / updated / moved / deleted
+    ids: list[int]
+
+
+class ChangeLog:
+    """データファイルの隣に置く版番号。
+
+    webapi / mcp / cli のどれが書いても TodoRepository._locked() の中を通るので、
+    ここが「変更が起きた」ことを知る唯一の場所になる。
+    """
+
+    def __init__(self, data_file: Path) -&gt; None:
+        self.path = data_file.with_name(f"{data_file.name}.rev")
+
+    def read(self) -&gt; Change | None:
+        if not self.path.exists():
+            return None
+        try:
+            payload = json.loads(self.path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return None
+        return Change(**payload)
+
+    def bump(self, kind: str, ids: list[int]) -&gt; Change:
+        """_locked() の中から呼ぶこと。読んで書くまでが排他される必要がある。"""
+        current = self.read()
+        change = Change(rev=(current.rev + 1) if current else 1, kind=kind, ids=ids)
+        temporary = self.path.with_suffix(".rev.tmp")
+        temporary.write_text(json.dumps(asdict(change)), encoding="utf-8")
+        temporary.replace(self.path)   # 読み手が半端な内容を見ないように置換で書く
+        return change</code></pre>
+
+        <h3>core/repositories/todo_repository.py（差分）</h3>
+        <p>書き込み 4 か所の末尾に 1 行ずつ足すだけ。<code>_locked()</code> の中に置くのが要点。</p>
+<pre><code>     def __init__(self, data_file: Path | None = None) -&gt; None:
+         ...
+         self.lock_file = self.data_file.with_name(f"{self.data_file.name}.lock")
++        self.change_log = ChangeLog(self.data_file)
+
+     def create(self, todo_create: TodoCreate) -&gt; Todo:
+         with self._locked():
+             ...
+             self._write_todos(todos)
++            self.change_log.bump("created", [todo.id])
+             return todo
+
+     # update / move / delete も同様に bump("updated" | "moved" | "deleted", ids)</code></pre>
+
+        <h3>interfaces/webapi/change_stream.py（新規）</h3>
+        <p>監視タスクとブローカー。core は asyncio を知らないままにする。</p>
+<pre><code>import asyncio
+
+from core.change_log import Change, ChangeLog
+
+
+class ChangeBroker:
+    """購読者ごとに 1 本のキューを持つ。遅い購読者が配信全体を止めないようにする。"""
+
+    def __init__(self) -&gt; None:
+        self._queues: set[asyncio.Queue[Change]] = set()
+
+    def subscribe(self) -&gt; asyncio.Queue[Change]:
+        queue: asyncio.Queue[Change] = asyncio.Queue(maxsize=32)
+        self._queues.add(queue)
+        return queue
+
+    def unsubscribe(self, queue: asyncio.Queue[Change]) -&gt; None:
+        self._queues.discard(queue)
+
+    def publish(self, change: Change) -&gt; None:
+        for queue in self._queues:
+            try:
+                queue.put_nowait(change)
+            except asyncio.QueueFull:
+                pass   # 溢れた分は捨てる。rev のずれでクライアントが全件取り直す
+
+
+async def watch_changes(
+    change_log: ChangeLog, broker: ChangeBroker, interval: float = 0.3
+) -&gt; None:
+    """rev ファイルを見張る。cli が別プロセスで書いた変更もここで拾える。"""
+    last_rev = (change_log.read() or Change(rev=0, kind="", ids=[])).rev
+    while True:
+        await asyncio.sleep(interval)
+        change = await asyncio.to_thread(change_log.read)
+        if change is not None and change.rev != last_rev:
+            last_rev = change.rev
+            broker.publish(change)</code></pre>
+
+        <h3>SSE エンドポイントと lifespan</h3>
+        <p>15 秒ごとのコメント行が、プロキシとブラウザに接続の生存を伝える。</p>
+<pre><code># interfaces/webapi/todos.py
+@router.get("/api/todos/events")
+async def stream_todo_changes(request: Request) -&gt; StreamingResponse:
+    broker: ChangeBroker = request.app.state.change_broker
+    queue = broker.subscribe()
+
+    async def events():
+        yield "retry: 3000\n\n"          # 切断時の再接続間隔をブラウザへ指示する
+        try:
+            while True:
+                try:
+                    change = await asyncio.wait_for(queue.get(), timeout=15)
+                except TimeoutError:
+                    yield ": keepalive\n\n"
+                    continue
+                data = json.dumps(
+                    {"rev": change.rev, "kind": change.kind, "ids": change.ids}
+                )
+                yield f"id: {change.rev}\nevent: todos-changed\ndata: {data}\n\n"
+        finally:
+            broker.unsubscribe(queue)    # 切断時に必ず外す
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",   # nginx を挟んだときに溜め込ませない
+        },
+    )
+
+
+# interfaces/webapi/app.py の lifespan に監視タスクを足す
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    watcher = asyncio.create_task(watch_changes(service.repository.change_log, broker))
+    try:
+        async with mcp_server.session_manager.run():
+            yield
+    finally:
+        watcher.cancel()</code></pre>
+
+        <h3>フロントエンド</h3>
+        <p>domain がインターフェースを決め、infrastructure が EventSource を持つ。テストでは差し替える。</p>
+<pre><code>// domain/repositories/todo-change-stream.ts
+export interface TodoChange {
+  rev: number
+  kind: 'created' | 'updated' | 'moved' | 'deleted'
+  ids: readonly number[]
+}
+
+export interface TodoChangeStream {
+  /** 購読を開始し、解除する関数を返す。 */
+  subscribe(handlers: {
+    onChange(change: TodoChange): void
+    /** 再接続した。取りこぼしがあり得るので呼び手は全件取り直す。 */
+    onReconnect(): void
+  }): () =&gt; void
+}
+
+// infrastructure/streams/sse-todo-change-stream.ts
+export class SseTodoChangeStream implements TodoChangeStream {
+  subscribe(handlers) {
+    const source = new EventSource(`${apiBaseUrl}/api/todos/events`)
+    let wasOpen = false
+
+    source.addEventListener('open', () =&gt; {
+      if (wasOpen) handlers.onReconnect()   // 初回接続では呼ばない
+      wasOpen = true
+    })
+    source.addEventListener('todos-changed', (event) =&gt; {
+      handlers.onChange(JSON.parse((event as MessageEvent).data))
+    })
+    // エラー時の再接続は EventSource 自身がやる。閉じない。
+
+    return () =&gt; source.close()
+  }
+}
+
+// presentation/hooks/use-todo-changes.ts
+export function useTodoChanges(dependencies: TodoDependencies, reload: () =&gt; Promise&lt;void&gt;) {
+  const appliedRev = useRef(0)
+
+  useEffect(
+    () =&gt;
+      dependencies.todoChangeStream.subscribe({
+        onChange(change) {
+          // 自分の操作で起きた変更は反映済みなので、rev を見て取り直しを省く
+          if (change.rev &lt;= appliedRev.current) return
+          appliedRev.current = change.rev
+          void reload()
+        },
+        onReconnect: () =&gt; void reload(),
+      }),
+    [dependencies, reload],
+  )
+}</code></pre>
+        <p>
+          追加は <code>di/create-todo-dependencies.ts</code> への 1 行と、<code>todo-page.tsx</code> での
+          <code>useTodoChanges(dependencies, reload)</code> 呼び出しのみ。<code>reload()</code> と
+          <code>requestSucceeded</code> は既存のものをそのまま使う。
+        </p>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="pitfalls">
+        <h2>6. 気をつける点</h2>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>項目</th><th>内容</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th>自分の操作のエコー</th>
+                <td>
+                  フロント自身の保存も rev を進めるため、直後に「変更あり」が返ってくる。
+                  <code>GET /api/todos</code> のレスポンスヘッダーで受け取った rev を覚えておき、
+                  それ以下のイベントは捨てる。
+                </td>
+              </tr>
+              <tr>
+                <th>再接続後は取り直す</th>
+                <td>
+                  切れている間の変更は届かない。<code>open</code> の 2 回目以降は無条件に全件再取得する。
+                  Phase 2 で <code>Last-Event-ID</code> の差分再送を足しても、この保険は残す。
+                </td>
+              </tr>
+              <tr>
+                <th>同時接続数</th>
+                <td>
+                  HTTP/1.1 では 1 オリジンあたり 6 本。SSE が 1 本を占有するので、
+                  同じアプリを 6 タブ以上開くと API が詰まる。本番で HTTP/2 を使うなら解消する。
+                </td>
+              </tr>
+              <tr>
+                <th>Vite の dev プロキシ</th>
+                <td>
+                  <code>/api</code> の既存プロキシ設定のまま SSE も通り、バッファリングもされない。
+                  追加設定は要らない。
+                </td>
+              </tr>
+              <tr>
+                <th>編集中の巻き戻し</th>
+                <td>
+                  Phase 1 の全件再取得は、編集中のタイトルやフォーカスを上書きしうる。
+                  <code>editingTodoId</code> がある間は反映を保留するか、Phase 2 の部分更新へ進む。
+                </td>
+              </tr>
+              <tr>
+                <th>テスト</th>
+                <td>
+                  jsdom に <code>EventSource</code> は無い。<code>TodoChangeStream</code> をポートにしてあるので、
+                  フロントのテストでは手で叩けるフェイクを注入する。バックエンドは <code>ChangeLog</code> 単体と、
+                  監視タスクが rev の変化を publish するかを見れば足りる。
+                </td>
+              </tr>
+              <tr>
+                <th>rev ファイルの扱い</th>
+                <td>
+                  <code>data/</code> 配下なので <code>.gitignore</code> の対象に含める。消えても壊れず、
+                  次の書き込みで 1 から振り直される。クライアント側は rev の減少を検知したら取り直す。
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="warn">
+          <p>
+            <strong>認証。</strong>Web UI 自体に認証が無い現状に合わせ、SSE も <code>/api</code> 配下の
+            無認証として置く。<code>HOST=0.0.0.0</code> で公開するなら、この経路も含めて
+            信頼できるネットワーク限定という前提は変わらない。
+          </p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <section id="decisions">
+        <h2>7. 決めること</h2>
+        <p>
+          方式は SSE、変更の起点は版番号ファイル。Phase 0 と Phase 1 で実用になり、追加依存はゼロ、
+          core への変更は rev の加算だけで済む。着手前に決めたいのは次の 3 点。
+        </p>
+        <ol>
+          <li>
+            <strong>どこまでやるか。</strong>Phase 0 だけ（ポーリングで十分）か、Phase 1 まで進めるか。
+          </li>
+          <li>
+            <strong>編集中の扱い。</strong>他所の変更を即座に反映するか、編集が終わるまで保留して
+            知らせるだけにするか。
+          </li>
+          <li>
+            <strong>rev の置き場所。</strong>別ファイル（この案）か、<code>Todo</code> 自体に
+            <code>updated_at</code> を持たせるか。後者は JSONL の形式変更を伴う。
+          </li>
+        </ol>
+      </section>
+    </main>
+  </body>
+</html>
