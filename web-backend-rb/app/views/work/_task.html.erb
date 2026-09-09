@@ -1,0 +1,33 @@
+<li class="work-row <%= "is-done" if todo.done? %> <%= "is-blocked" if todo.blocked? %>">
+  <div class="work-main">
+    <%= link_to todo.title, todo_path(todo), class: "todo-title" %>
+    <% if todo.parent %>
+      <span class="muted work-parent"><%= link_to todo.parent.title, browse_todo_path(todo.parent), class: "work-parent-link", title: "親をブラウズで見る" %></span>
+    <% end %>
+    <% if todo.blocked? %>
+      <span class="blocked-badge" title="依存先: <%= todo.blocking_dependencies.map(&:title).join('、') %>">ブロック中</span>
+    <% end %>
+    <% if todo.target_date %>
+      <span class="due-date <%= 'is-overdue' if todo.target_date < Date.current && !todo.done? %>">〜<%= format_target_date(todo.target_date) %></span>
+    <% end %>
+    <span class="muted">予定 <%= format_hours(todo.estimated_hours) %></span>
+  </div>
+  <div class="work-controls">
+    <span class="priority-group">
+      <% Todo::PRIORITIES.each do |p| %>
+        <%= button_to todo_priority_label(p), set_priority_todo_path(todo, priority: p),
+              method: :patch,
+              class: "priority-btn priority-btn-#{p} #{'is-current' if todo.priority == p}",
+              title: "優先度を#{todo_priority_label(p)}にする" %>
+      <% end %>
+    </span>
+    <span class="move-group">
+      <%= button_to "↑", move_todo_path(todo, direction: "up"), method: :patch, class: "move-btn", title: "上へ" %>
+      <%= button_to "↓", move_todo_path(todo, direction: "down"), method: :patch, class: "move-btn", title: "下へ" %>
+    </span>
+    <% unless todo.done? %>
+      <%= button_to todo.status == "open" ? "▶ 着手" : "▶ 完了", advance_todo_path(todo),
+            method: :patch, class: "btn advance-btn", title: "状態を進める" %>
+    <% end %>
+  </div>
+</li>

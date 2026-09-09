@@ -1,0 +1,11 @@
+<li class="mm-node" id="todo-<%= todo.id %>">
+  <div class="mm-card type-border-<%= todo.todo_type %> <%= "is-done" if todo.done? %>">
+    <span class="type-badge type-<%= todo.todo_type %>"><%= todo_type_label(todo.todo_type) %></span>
+    <%= link_to todo.title, todo_path(todo), class: "mm-title", title: "詳細を見る" %>
+    <%= link_to "▤", browse_todo_path(todo), class: "mm-action", title: "ブラウズで掘り下げる" %>
+    <% unless todo.allowed_child_types.empty? %>
+      <%= render "mindmap/add_form", parent: todo, todo: Todo.new(parent: todo, todo_type: todo.allowed_child_types.first), open: false %>
+    <% end %>
+  </div>
+  <ul class="mm-children" id="mm-children-<%= todo.id %>"><%= render partial: "mindmap/node", collection: todo.children, as: :todo %></ul>
+</li>

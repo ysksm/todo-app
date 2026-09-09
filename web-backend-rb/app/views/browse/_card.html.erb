@@ -1,0 +1,25 @@
+<%
+  total = 1 + todo.descendants.size
+  done = ([ todo ] + todo.descendants).count(&:done?)
+  percent = (done * 100.0 / total).round
+%>
+<div class="browse-card type-border-<%= todo.todo_type %>">
+  <div class="browse-card-head">
+    <span class="type-badge type-<%= todo.todo_type %>"><%= todo_type_label(todo.todo_type) %></span>
+    <span class="status status-<%= todo.status %>"><%= todo_status_label(todo.status) %></span>
+  </div>
+  <%= link_to todo.title, browse_todo_path(todo), class: "browse-card-title" %>
+  <% if todo.goal.present? %>
+    <p class="browse-card-goal"><%= truncate(todo.goal, length: 60) %></p>
+  <% end %>
+  <div class="browse-card-meta">
+    <span class="priority-badge priority-<%= todo.priority %>"><%= todo_priority_label(todo.priority) %></span>
+    <% if todo.target_date %>
+      <span class="due-date <%= 'is-overdue' if todo.target_date < Date.current && !todo.done? %>">〜<%= format_target_date(todo.target_date) %></span>
+    <% end %>
+    <span class="muted"><%= todo.children.size %> 件の子</span>
+  </div>
+  <div class="progress-bar" title="完了 <%= done %>/<%= total %>">
+    <div class="progress-fill" style="width: <%= percent %>%"></div>
+  </div>
+</div>

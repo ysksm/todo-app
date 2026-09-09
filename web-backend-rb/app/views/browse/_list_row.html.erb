@@ -1,0 +1,19 @@
+<%
+  total = 1 + todo.descendants.size
+  done = ([ todo ] + todo.descendants).count(&:done?)
+%>
+<tr class="<%= "is-done" if todo.done? %>">
+  <td><span class="type-badge type-<%= todo.todo_type %>"><%= todo_type_label(todo.todo_type) %></span></td>
+  <td><%= link_to todo.title, browse_todo_path(todo, view: (@view if @view == "list")), class: "todo-title" %></td>
+  <td class="muted"><%= todo.goal.present? ? truncate(todo.goal, length: 40) : "-" %></td>
+  <td><span class="priority-badge priority-<%= todo.priority %>"><%= todo_priority_label(todo.priority) %></span></td>
+  <td>
+    <% if todo.target_date %>
+      <span class="due-date <%= 'is-overdue' if todo.target_date < Date.current && !todo.done? %>"><%= format_target_date(todo.target_date) %></span>
+    <% else %>
+      -
+    <% end %>
+  </td>
+  <td><%= done %>/<%= total %></td>
+  <td><span class="status status-<%= todo.status %>"><%= todo_status_label(todo.status) %></span></td>
+</tr>

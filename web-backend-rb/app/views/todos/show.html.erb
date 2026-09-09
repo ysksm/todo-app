@@ -6,11 +6,44 @@
 </div>
 
 <dl class="todo-detail">
-  <dt>状態</dt>
-  <dd><span class="status status-<%= @todo.status %>"><%= todo_status_label(@todo.status) %></span></dd>
+  <dt>状態 / 優先度</dt>
+  <dd>
+    <span class="status status-<%= @todo.status %>"><%= todo_status_label(@todo.status) %></span>
+    <span class="priority-badge priority-<%= @todo.priority %>">優先度: <%= todo_priority_label(@todo.priority) %></span>
+    <% if @todo.blocked? %>
+      <span class="blocked-badge">ブロック中</span>
+    <% end %>
+  </dd>
 
   <dt>説明</dt>
   <dd><%= @todo.description.presence || "（なし）" %></dd>
+
+  <dt>目標記述</dt>
+  <dd><%= @todo.goal.presence || "（なし）" %></dd>
+
+  <dt>目標予定日</dt>
+  <dd><%= format_target_date(@todo.target_date) %></dd>
+
+  <dt>作業時間 / コスト</dt>
+  <dd>
+    <table class="metrics-table">
+      <thead>
+        <tr><th></th><th>予定</th><th>実績</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>作業時間</th>
+          <td><%= format_hours(@todo.estimated_hours) %></td>
+          <td><%= format_hours(@todo.actual_hours) %></td>
+        </tr>
+        <tr>
+          <th>コスト</th>
+          <td><%= format_cost(@todo.estimated_cost) %></td>
+          <td><%= format_cost(@todo.actual_cost) %></td>
+        </tr>
+      </tbody>
+    </table>
+  </dd>
 
   <dt>親</dt>
   <dd>
@@ -31,12 +64,29 @@
       （なし）
     <% end %>
   </dd>
+
+  <dt>関連・依存</dt>
+  <dd>
+    <%= render "todos/links_panel", todo: @todo %>
+  </dd>
+
+  <dt>マインドマップ</dt>
+  <dd>
+    <details class="inline-panel">
+      <summary class="btn">マインドマップを開く（このチケットの配下のみ）</summary>
+      <div class="inline-panel-body">
+        <%= render "mindmap/map", roots: [ @todo ] %>
+        <p class="hint"><%= link_to "マインドマップ画面で大きく開く", mindmap_path(@todo) %></p>
+      </div>
+    </details>
+  </dd>
 </dl>
 
 <div class="form-actions">
   <% unless @todo.allowed_child_types.empty? %>
-    <%= link_to "＋ 子を追加", new_todo_path(parent_id: @todo.id), class: "btn btn-primary" %>
+    <%= link_to "＋ 子を追加", new_todo_path(parent_id: @todo.id, return_to: todo_path(@todo)), class: "btn btn-primary" %>
   <% end %>
-  <%= link_to "編集", edit_todo_path(@todo), class: "btn" %>
+  <%= link_to "編集", edit_todo_path(@todo, return_to: todo_path(@todo)), class: "btn" %>
+  <%= link_to "ブラウズで掘り下げ", browse_todo_path(@todo), class: "btn" %>
   <%= link_to "一覧へ戻る", todos_path, class: "btn" %>
 </div>

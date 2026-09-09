@@ -56,7 +56,11 @@ module Api
     end
 
     def todo_params
-      params.require(:todo).permit(:title, :description, :todo_type, :status, :parent_id)
+      params.require(:todo).permit(
+        :title, :description, :todo_type, :status, :parent_id,
+        :goal, :target_date, :priority,
+        :estimated_hours, :estimated_cost, :actual_hours, :actual_cost
+      )
     end
 
     def render_errors(todo)
@@ -72,6 +76,13 @@ module Api
         status: todo.status,
         parent_id: todo.parent_id,
         position: todo.position,
+        goal: todo.goal,
+        target_date: todo.target_date,
+        priority: todo.priority,
+        estimated_hours: todo.estimated_hours,
+        estimated_cost: todo.estimated_cost,
+        actual_hours: todo.actual_hours,
+        actual_cost: todo.actual_cost,
         created_at: todo.created_at,
         updated_at: todo.updated_at
       }

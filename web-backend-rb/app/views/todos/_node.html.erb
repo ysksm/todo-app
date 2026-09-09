@@ -6,11 +6,19 @@
           title: toggle_label, "aria-label": toggle_label, "aria-pressed": todo.done? %>
     <span class="type-badge type-<%= todo.todo_type %>"><%= todo_type_label(todo.todo_type) %></span>
     <%= link_to todo.title, todo_path(todo), class: "todo-title" %>
+    <% if todo.priority != "medium" %>
+      <span class="priority-badge priority-<%= todo.priority %>"><%= todo_priority_label(todo.priority) %></span>
+    <% end %>
+    <% if todo.target_date %>
+      <span class="due-date <%= 'is-overdue' if todo.target_date < Date.current && !todo.done? %>"><%= format_target_date(todo.target_date) %></span>
+    <% end %>
     <span class="status status-<%= todo.status %>"><%= todo_status_label(todo.status) %></span>
     <span class="actions">
       <% unless todo.allowed_child_types.empty? %>
         <%= link_to "＋子", new_todo_path(parent_id: todo.id), title: "子を追加" %>
       <% end %>
+      <%= link_to "ブラウズ", browse_todo_path(todo), title: "ブラウズで掘り下げる" %>
+      <%= link_to "マップ", mindmap_path(anchor: "todo-#{todo.id}"), title: "マインドマップで見る" %>
       <%= link_to "編集", edit_todo_path(todo) %>
       <%= button_to "削除", todo_path(todo), method: :delete, class: "link-danger",
             form: { data: { turbo_confirm: "「#{todo.title}」と子孫をすべて削除します。よろしいですか？" } } %>

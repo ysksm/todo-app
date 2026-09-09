@@ -1,0 +1,11 @@
+<%# マインドマップのポップオーバーから追加されたノードをその場に描画する %>
+<%= turbo_stream.append(@todo.parent_id ? "mm-children-#{@todo.parent_id}" : "mm-root-children") do %>
+  <%= render "mindmap/node", todo: @todo %>
+<% end %>
+<%# フォームを空にして開いたまま置き換え、続けて追加できるようにする %>
+<%= turbo_stream.replace("mm-add-#{@todo.parent_id || 'root'}") do %>
+  <%= render "mindmap/add_form",
+        parent: @todo.parent,
+        todo: Todo.new(parent: @todo.parent, todo_type: @todo.todo_type),
+        open: true %>
+<% end %>
