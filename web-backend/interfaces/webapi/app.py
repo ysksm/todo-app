@@ -17,7 +17,7 @@ from mcp.server.auth.routes import (
 from mcp.server.auth.settings import ClientRegistrationOptions, RevocationOptions
 from mcp.server.transport_security import TransportSecuritySettings
 
-from core.repositories.todo_repository import TodoRepository
+from core.repositories.factory import create_todo_repository
 from core.services.todo_service import TodoService
 from interfaces.mcp.auth import McpAuthMiddleware
 from interfaces.mcp.config import McpSettings, load_mcp_settings
@@ -47,7 +47,7 @@ def create_app(
     複数のアプリを作っても互いに影響しない。
     """
     settings = mcp_settings or load_mcp_settings()
-    service = todo_service or TodoService(TodoRepository())
+    service = todo_service or TodoService(create_todo_repository())
 
     public_url = settings.resolve_public_url()
     issuer_url = _URL_ADAPTER.validate_python(public_url)

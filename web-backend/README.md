@@ -24,8 +24,40 @@ The API is available at `http://127.0.0.1:8000`, and Swagger UI is available at
 sh ./web-backend/start.sh
 ```
 
-Todo data is persisted to `data/todos.jsonl`. Set `TODO_DATA_FILE` to use a
-different JSONL file.
+Todo data is persisted to `data/todos.jsonl` by default. Set `TODO_DATA_FILE`
+to use a different JSONL file, or see [Storage](#storage) to store todos in
+Supabase instead.
+
+## Storage
+
+`TODO_STORAGE` selects where todos are persisted:
+
+| `TODO_STORAGE` | Storage | Related variables |
+| --- | --- | --- |
+| unset / `jsonl` | A JSONL file (default: `data/todos.jsonl`) | `TODO_DATA_FILE` |
+| `supabase` | A Supabase (PostgreSQL) table via PostgREST | `SUPABASE_URL`, `SUPABASE_KEY`, `SUPABASE_TODOS_TABLE` |
+
+### Supabase
+
+1. Create a Supabase project and run [`supabase/schema.sql`](supabase/schema.sql)
+   in the SQL Editor to create the `todos` table.
+2. Start the backend with:
+
+   ```sh
+   TODO_STORAGE=supabase \
+   SUPABASE_URL=https://<project-ref>.supabase.co \
+   SUPABASE_KEY=<service-role-key> ./start.sh
+   ```
+
+- `SUPABASE_KEY` should be the **service role key** (Project Settings → API);
+  the anon key only works if you add a permissive RLS policy (see the comment
+  in `schema.sql`).
+- `SUPABASE_TODOS_TABLE` overrides the table name (default: `todos`).
+- The Web API, MCP, and CLI all honor `TODO_STORAGE`; the CLI's `--data-file`
+  flag forces JSONL regardless.
+- Unlike the JSONL backend (which uses `flock`), cross-process writes are not
+  serialized — run a single backend process when using Supabase (the Web API
+  and MCP already share one process).
 
 ## Changing the listen host and port
 
@@ -261,7 +293,7 @@ uv run pytest
 ```text
 core/          全機能。インターフェースからは独立している
   models/        Pydantic のモデル
-  repositories/  JSONL への永続化
+  repositories/  永続化（JSONL / Supabase、TODO_STORAGE で切り替え）
   services/      TodoService — 唯一の入口
   errors.py      インターフェースが翻訳する例外
 interfaces/    core を外へ出すアダプター

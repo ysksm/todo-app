@@ -20,7 +20,7 @@ from core.errors import TodoError
 from core.models.todo import Todo, TodoCreate, TodoMove, TodoUpdate
 from core.models.todo_status import TodoStatus
 from core.models.todo_type import TodoType
-from core.repositories.todo_repository import TodoRepository
+from core.repositories.factory import create_todo_repository
 from core.services.todo_service import STATUS_MARKS, TodoService
 
 TYPE_CHOICES = [todo_type.value for todo_type in TodoType]
@@ -31,7 +31,11 @@ STATUS_HELP = f"タスクの状態（{' / '.join(STATUS_CHOICES)}）"
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="todo", description="親子関係を持つ TODO を操作する")
-    parser.add_argument("--data-file", type=Path, help="JSONL の保存先を明示する")
+    parser.add_argument(
+        "--data-file",
+        type=Path,
+        help="JSONL の保存先を明示する（指定すると TODO_STORAGE より優先して JSONL を使う）",
+    )
     parser.add_argument("--json", action="store_true", help="結果を JSON で出力する")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -96,7 +100,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    service = TodoService(TodoRepository(data_file=args.data_file))
+    service = TodoService(create_todo_repository(data_file=args.data_file))
 
     try:
         output = run_command(service, args)
